@@ -50,7 +50,7 @@ describe('Ticker Sleep/Wake logic', () => {
     expect(stats.happiness).toBeCloseTo(79.933, 3);
   });
 
-  it('keeps sleeping when energy reaches 100 during live tick', () => {
+  it('triggers wake_up when sleeping energy reaches 100 during live tick', () => {
     useStore.getState()._resetToDefaults();
     useStore.getState().setPetState('sleeping');
     // Energy is 99.9 (so next tick it reaches 100)
@@ -66,8 +66,7 @@ describe('Ticker Sleep/Wake logic', () => {
 
     const stats = useStore.getState().pet.stats;
     expect(stats.energy).toBe(100);
-    expect(useStore.getState().pet.currentState).toBe('sleeping');
-    expect(onForcedEvent).not.toHaveBeenCalled();
+    expect(onForcedEvent).toHaveBeenCalledWith({ kind: 'wake_up' });
   });
 
   it('decays energy normally when not sleeping', () => {

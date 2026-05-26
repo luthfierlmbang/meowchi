@@ -64,6 +64,8 @@ export function runTickOnce(handlers: TickHandlers = {}): void {
       handlers.onForcedEvent({ kind: 'forced_pooping' });
     } else if (next.energy === 0 && cur.energy > 0) {
       handlers.onForcedEvent({ kind: 'forced_sleeping' });
+    } else if (isSleeping && next.energy === 100) {
+      handlers.onForcedEvent({ kind: 'wake_up' });
     }
   }
 }

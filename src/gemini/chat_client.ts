@@ -3,6 +3,7 @@ import { getConfig, disableFeature, getFeatureError } from '../state/Config_Stor
 import { useStore } from '../state/store';
 import type { CatState } from '../state/types';
 import type { ChatMessage } from '../state/types';
+import { cancelAllTransientTimers } from '../engine/transient_timers';
 export type { ChatMessage };
 
 export const CHAT_MODEL = 'gemini-2.5-flash';
@@ -44,6 +45,34 @@ export class ChatClientError extends Error {
 
 let _inFlight: AbortController | null = null;
 let _genAi: GoogleGenerativeAI | null = null;
+
+type ChatIntent = 'sleep' | 'wake' | null;
+
+function detectChatIntent(message: string): ChatIntent {
+  const normalized = message.toLowerCase();
+  if (
+    /\b(bangun|wake|wake up|wakeup|bangunin|ayo bangun)\b/.test(normalized)
+  ) {
+    return 'wake';
+  }
+  if (
+    /\b(tidur|bobo|bobok|boboin|sleep|sleepy|istirahat|rebahan)\b/.test(normalized)
+  ) {
+    return 'sleep';
+  }
+  return null;
+}
+
+function appendLocalExchange(userText: string, replyText: string): ChatMessage {
+  const now = Date.now();
+  const userMsg: ChatMessage = { role: 'user', text: userText, ts: now };
+  const mochiMsg: ChatMessage = { role: 'mochi', text: replyText, ts: now + 1 };
+  const state = useStore.getState();
+  state.addChatMessage(userMsg);
+  state.addChatMessage(mochiMsg);
+  state.markSocialInteraction(now);
+  return mochiMsg;
+}
 
 function getGenAi(): GoogleGenerativeAI {
   const cfg = getConfig();
@@ -95,9 +124,6 @@ function buildSystemInstruction(payload: ChatPayload): string {
  */
 export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
   // Pre-flight checks
-  if (payload.stats.happiness === 0) {
-    throw new ChatClientError('Mochi terlalu sedih untuk berbicara.', 'happiness_locked');
-  }
   if (typeof payload.userMessage !== 'string' || payload.userMessage.trim().length === 0) {
     throw new ChatClientError('Pesan tidak boleh kosong.', 'invalid_input');
   }
@@ -106,6 +132,26 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
   }
   if (_inFlight) {
     throw new ChatClientError('Permintaan sebelumnya masih berjalan.', 'in_flight');
+  }
+
+  const text = payload.userMessage.trim();
+  const intent = detectChatIntent(text);
+  if (intent === 'wake') {
+    cancelAllTransientTimers();
+    useStore.getState().setPetState('idle');
+    return appendLocalExchange(text, 'Meow... Mochi bangun.');
+  }
+  if (intent === 'sleep') {
+    cancelAllTransientTimers();
+    useStore.getState().setPetState('sleeping');
+    return appendLocalExchange(text, 'Mochi tidur dulu... zzzz');
+  }
+  if (payload.currentState === 'sleeping') {
+    return appendLocalExchange(text, 'zzzz');
+  }
+
+  if (payload.stats.happiness === 0) {
+    throw new ChatClientError('Mochi terlalu sedih untuk berbicara.', 'happiness_locked');
   }
 
   const systemInstruction = buildSystemInstruction(payload); // may throw instruction_build_failed
