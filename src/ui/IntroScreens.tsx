@@ -52,7 +52,6 @@ export function IntroScreens({
   if (step === 'onboarding') {
     return (
       <main className="meow-screen meow-light-screen">
-        <MeowchiTopNav />
         <section className="meow-onboarding">
           <AnimatedSprite className="meow-onboarding-cat" frames={ONBOARDING_FRAMES} alt="Meowchi berlari" />
           <div>

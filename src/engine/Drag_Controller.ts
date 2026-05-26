@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useStore } from '../state/store';
 import { resolveDrop, type Rect } from './aabb';
 import {
+  catArenaBounds,
   catRectAt,
-  FLOOR_Y_FOR_CAT,
+  clampPosition,
   H_CAT,
   ROOM,
   W_CAT,
@@ -121,11 +122,13 @@ export function useDragController(
       const roomW = roomEl ? roomEl.clientWidth : ROOM.right;
       const roomH = roomEl ? roomEl.clientHeight : ROOM.bottom;
       const dynamicRoom = { left: 0, top: 0, right: roomW, bottom: roomH };
+      const arena = catArenaBounds(dynamicRoom);
 
-      const newPos = {
-        x: Math.max(dynamicRoom.left, Math.min(e.clientX - _pointerOffset.x, dynamicRoom.right - W_CAT)),
-        y: Math.max(dynamicRoom.top, Math.min(e.clientY - _pointerOffset.y, dynamicRoom.bottom - H_CAT)),
-      };
+      const newPos = clampPosition(
+        { x: e.clientX - _pointerOffset.x, y: e.clientY - _pointerOffset.y },
+        arena,
+        { width: W_CAT, height: H_CAT },
+      );
       useStore.getState().setPetPosition(newPos);
     },
     [wrapperRef],
@@ -218,8 +221,9 @@ export function _getActivePointerIdForTest(): number | null {
 }
 
 export function placeOnFloor(x: number): void {
+  const arena = catArenaBounds(ROOM);
   useStore.getState().setPetPosition({
-    x: Math.max(ROOM.left, Math.min(x, ROOM.right - W_CAT)),
-    y: FLOOR_Y_FOR_CAT,
+    x: Math.max(arena.left, Math.min(x, arena.right - W_CAT)),
+    y: arena.bottom - H_CAT,
   });
 }

@@ -13,6 +13,8 @@ export const ROOM: Readonly<RoomBounds> = {
 // Cat sprite bounding box — enlarged to ~half the screen width
 export const W_CAT = 160;
 export const H_CAT = 160;
+export const FLOOR_TOP_RATIO = 0.58;
+export const FLOOR_BOTTOM_INSET = 14;
 
 // Floor baseline — sprite's bottom-left edge sits on Y_floor when on the floor
 export const Y_FLOOR = ROOM.bottom;
@@ -29,6 +31,22 @@ export function clampPosition(
   return {
     x: Math.max(room.left, Math.min(pos.x, room.right - size.width)),
     y: Math.max(room.top, Math.min(pos.y, room.bottom - size.height)),
+  };
+}
+
+/**
+ * The cat can only be carried and walk on the house floor area.
+ */
+export function catArenaBounds(room: RoomBounds): RoomBounds {
+  const bottom = Math.max(room.top + H_CAT, room.bottom - FLOOR_BOTTOM_INSET);
+  const floorTop = Math.round(room.bottom * FLOOR_TOP_RATIO);
+  const top = Math.min(bottom - H_CAT, Math.max(room.top, floorTop));
+
+  return {
+    left: room.left,
+    top,
+    right: room.right,
+    bottom,
   };
 }
 

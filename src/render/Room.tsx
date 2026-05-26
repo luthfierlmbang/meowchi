@@ -6,9 +6,9 @@ import {
   FRAME_DURATION_MS_ACTIVE,
   getRoomBackgroundForHour,
 } from '../assets/Asset_Map';
-import { ROOM, Y_FLOOR } from '../engine/coords';
+import { catArenaBounds, clampPosition, H_CAT, ROOM, W_CAT } from '../engine/coords';
 import { useDragController, type DragControllerHandlers } from '../engine/Drag_Controller';
-import { aabb, isInsideRoom, overlapsAny } from '../engine/aabb';
+import { isInsideRoom, overlapsAny } from '../engine/aabb';
 import type { PlacedItem, InventoryEntry, FurnitureType } from '../state/types';
 import { LABELS } from '../features/shop/shop';
 
@@ -160,6 +160,15 @@ function ghostSpriteUrl(type: FurnitureType): string {
   return spriteUrlFor(type, false);
 }
 
+function roomBoundsFor(roomEl: HTMLElement | null) {
+  return {
+    left: 0,
+    top: 0,
+    right: roomEl ? roomEl.clientWidth : ROOM.right,
+    bottom: roomEl ? roomEl.clientHeight : ROOM.bottom,
+  };
+}
+
 // ─── Room ─────────────────────────────────────────────────────────────────────
 
 export function Room({ dragHandlers }: RoomProps) {
@@ -186,6 +195,14 @@ export function Room({ dragHandlers }: RoomProps) {
   const catIsPooping = currentState === 'pooping';
   const firstToy = placed_items.find((p) => p.type === 'toy');
 
+  useEffect(() => {
+    const arena = catArenaBounds(roomBoundsFor(wrapperRef.current));
+    const clamped = clampPosition(position, arena, { width: W_CAT, height: H_CAT });
+    if (clamped.x !== position.x || clamped.y !== position.y) {
+      useStore.getState().setPetPosition(clamped);
+    }
+  }, [position.x, position.y]);
+
   // ── Drag ghost state ──────────────────────────────────────────────────────
   const [ghost, setGhost] = useState<DragGhost | null>(null);
   const ghostRef = useRef<DragGhost | null>(null);
@@ -196,9 +213,7 @@ export function Room({ dragHandlers }: RoomProps) {
   const isValidDrop = useCallback(
     (entry: InventoryEntry, x: number, y: number, excludeId?: string): boolean => {
       const roomEl = wrapperRef.current;
-      const roomW = roomEl ? roomEl.clientWidth : ROOM.right;
-      const roomH = roomEl ? roomEl.clientHeight : ROOM.bottom;
-      const dynamicRoom = { left: 0, top: 0, right: roomW, bottom: roomH };
+      const dynamicRoom = roomBoundsFor(roomEl);
       const rect = { x, y, width: entry.width, height: entry.height };
       if (!isInsideRoom(rect, dynamicRoom)) return false;
       const others = placed_items.filter((p) => p.id !== excludeId);

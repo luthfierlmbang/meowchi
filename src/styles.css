@@ -59,10 +59,18 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   background:
     radial-gradient(circle at top left, rgba(138, 0, 0, 0.16), transparent 32rem),
     linear-gradient(135deg, #fff5f5, #f8fafc 48%, #e2e8f0);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
 }
 
 button,
@@ -78,10 +86,10 @@ button {
 .meow-screen {
   position: relative;
   display: flex;
-  width: 100%;
-  max-width: 430px;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
   min-height: 100dvh;
-  margin: 0 auto;
   overflow: hidden;
   flex-direction: column;
   background: var(--meow-bg);
@@ -91,7 +99,7 @@ button {
 
 .meow-game-shell {
   height: 100dvh;
-  min-height: 640px;
+  min-height: 0;
   background: var(--meow-bg);
 }
 
@@ -1170,11 +1178,10 @@ button {
 .splash-screen {
   position: relative;
   display: flex;
-  width: 100%;
-  max-width: 430px;
+  width: 100vw;
+  max-width: none;
   height: 100dvh;
-  min-height: 640px;
-  margin: 0 auto;
+  min-height: 100dvh;
   overflow: hidden;
   flex-direction: column;
   background: #8a0000;
