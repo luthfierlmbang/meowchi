@@ -161,6 +161,7 @@ export async function verifyHabitPhoto(
     }
     return parsed;
   } catch (err) {
+    console.error('[Gemini Vision Error]', err);
     if (err instanceof VisionClientError) throw err;
     const e = err as Error & { status?: number };
     const msg = (e?.message || '').toLowerCase();

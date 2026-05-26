@@ -150,6 +150,7 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
     _history.push(mochiMsg);
     return mochiMsg;
   } catch (err) {
+    console.error('[Gemini Chat Error]', err);
     const e = err as Error & { status?: number; statusText?: string };
     if (err instanceof ChatClientError) throw err;
     const msg = (e?.message || '').toLowerCase();
