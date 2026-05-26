@@ -11,7 +11,7 @@
  * The actual Pointer Events drag UX lives in the InventoryDrawer/Room components
  * (tasks 24.2 / 13.1). This module exposes only validation + atomic commits.
  */
-import { aabb, isInsideRoom, overlapsAny, type Rect } from './aabb';
+import { aabb, isInsideRoom, overlapsAny, type Rect, type RoomBounds } from './aabb';
 import { ROOM } from './coords';
 import { useStore } from '../state/store';
 import type { InventoryEntry, PlacedItem } from '../state/types';
@@ -28,12 +28,13 @@ export function validatePlacement(
   entry: InventoryEntry,
   pos: { x: number; y: number },
   placed_items: readonly PlacedItem[],
+  room: RoomBounds = ROOM,
 ): ValidationResult {
   if (entry.width <= 0 || entry.height <= 0) {
     return { ok: false, reason: 'invalid_input' };
   }
   const rect: Rect = { x: pos.x, y: pos.y, width: entry.width, height: entry.height };
-  if (!isInsideRoom(rect, ROOM)) return { ok: false, reason: 'out_of_bounds' };
+  if (!isInsideRoom(rect, room)) return { ok: false, reason: 'out_of_bounds' };
   // Cast away readonly for the helper, which only reads.
   if (overlapsAny(rect, placed_items as PlacedItem[])) return { ok: false, reason: 'overlap' };
   return { ok: true };
@@ -64,6 +65,20 @@ export function tryPlace(entryId: string, pos: { x: number; y: number }): Valida
   const entry = state.inventory.find((i) => i.id === entryId);
   if (!entry) return { ok: false, reason: 'not_found' };
   const v = validatePlacement(entry, pos, state.placed_items);
+  if (!v.ok) return v;
+  state.atomicPlaceItem(entryId, pos.x, pos.y);
+  return { ok: true };
+}
+
+export function tryPlaceInRoom(
+  entryId: string,
+  pos: { x: number; y: number },
+  room: RoomBounds,
+): ValidationResult {
+  const state = useStore.getState();
+  const entry = state.inventory.find((i) => i.id === entryId);
+  if (!entry) return { ok: false, reason: 'not_found' };
+  const v = validatePlacement(entry, pos, state.placed_items, room);
   if (!v.ok) return v;
   state.atomicPlaceItem(entryId, pos.x, pos.y);
   return { ok: true };

@@ -9,6 +9,7 @@ export {
   validatePlacement,
   validateReposition,
   tryPlace,
+  tryPlaceInRoom,
   tryReposition,
   removePlaced,
   type ValidationResult,

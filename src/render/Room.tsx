@@ -5,10 +5,11 @@ import {
   ASSET_MAP,
   FRAME_DURATION_MS_ACTIVE,
   getRoomBackgroundForHour,
+  type FrameUrl,
 } from '../assets/Asset_Map';
-import { catArenaBounds, clampPosition, H_CAT, ROOM, W_CAT } from '../engine/coords';
+import { catArenaBounds, catRectAt, clampPosition, H_CAT, ROOM, W_CAT } from '../engine/coords';
 import { useDragController, type DragControllerHandlers } from '../engine/Drag_Controller';
-import { isInsideRoom, overlapsAny } from '../engine/aabb';
+import { aabb, isInsideRoom, overlapsAny } from '../engine/aabb';
 import type { PlacedItem, InventoryEntry, FurnitureType } from '../state/types';
 import { LABELS } from '../features/shop/shop';
 
@@ -46,31 +47,46 @@ function useTimeOfDayBackground(): string {
   return bg;
 }
 
-// ─── Toy overlay ─────────────────────────────────────────────────────────────
+// ─── Animated item sprite ────────────────────────────────────────────────────
 
-function ToyActionOverlay({ x, y }: { x: number; y: number }) {
+function AnimatedItemSprite({
+  frames,
+  item,
+  alt,
+  onDragStart,
+}: {
+  frames: FrameUrl[];
+  item: PlacedItem;
+  alt: string;
+  onDragStart: (itemId: string, e: React.PointerEvent) => void;
+}) {
   const [frame, setFrame] = useState(0);
   useEffect(() => {
     const id = setInterval(() => {
-      setFrame((f) => (f + 1) % ASSET_MAP.toy_action.length);
+      setFrame((f) => (f + 1) % frames.length);
     }, FRAME_DURATION_MS_ACTIVE);
     return () => clearInterval(id);
-  }, []);
+  }, [frames.length]);
   return (
     <img
       className="pixel-img"
-      src={ASSET_MAP.toy_action[frame]}
-      alt=""
-      aria-hidden
+      src={frames[frame] ?? frames[0]}
+      alt={alt}
       draggable={false}
       style={{
         position: 'absolute',
-        left: x,
-        top: y - 16,
-        width: 48,
-        height: 48,
-        pointerEvents: 'none',
+        left: item.x,
+        top: item.y,
+        width: item.width,
+        height: item.height,
+        cursor: 'grab',
+        touchAction: 'none',
         userSelect: 'none',
+      }}
+      onPointerDown={(e) => {
+        if (e.button !== 0 || !e.isPrimary) return;
+        e.stopPropagation();
+        onDragStart(item.id, e);
       }}
     />
   );
@@ -87,37 +103,31 @@ function spriteUrlFor(type: FurnitureType, catIsPooping: boolean): string {
 
 interface PlacedItemSpriteProps {
   item: PlacedItem;
-  catIsPooping: boolean;
+  currentState: string;
+  catPosition: { x: number; y: number };
   onDragStart: (itemId: string, e: React.PointerEvent) => void;
 }
 
-function PlacedItemSprite({ item, catIsPooping, onDragStart }: PlacedItemSpriteProps) {
-  const src = spriteUrlFor(item.type, catIsPooping);
-  // Hide litterbox sprite while cat is pooping — the Pup animation renders on top
-  // and the litterbox_used sprite would double up. We show litterbox_used ONLY
-  // when the cat is NOT actively animating the pup frames (i.e., after pooping ends).
-  // During active pooping, hide the placed litterbox entirely so only the cat's
-  // Pup animation is visible.
-  if (item.type === 'litterbox' && catIsPooping) {
-    // Show the used litterbox sprite at the same position but behind the cat
+function PlacedItemSprite({ item, currentState, catPosition, onDragStart }: PlacedItemSpriteProps) {
+  const itemRect = { x: item.x, y: item.y, width: item.width, height: item.height };
+  const activeUnderCat = aabb(catRectAt(catPosition), itemRect);
+  const isBeingUsed =
+    (item.type === 'toy' && currentState === 'eating' && activeUnderCat) ||
+    (item.type === 'scratcher' && currentState === 'scratching' && activeUnderCat) ||
+    (item.type === 'litterbox' && currentState === 'pooping' && activeUnderCat);
+
+  if (item.type === 'toy' && isBeingUsed) {
     return (
-      <img
-        className="pixel-img"
-        src={ASSET_MAP.items.litterbox_used}
-        alt="Litter Box"
-        draggable={false}
-        style={{
-          position: 'absolute',
-          left: item.x,
-          top: item.y,
-          width: item.width,
-          height: item.height,
-          userSelect: 'none',
-          pointerEvents: 'none', // no drag while cat is using it
-        }}
+      <AnimatedItemSprite
+        frames={ASSET_MAP.toy_action}
+        item={item}
+        alt={LABELS[item.type]}
+        onDragStart={onDragStart}
       />
     );
   }
+
+  const src = spriteUrlFor(item.type, item.type === 'litterbox' && isBeingUsed);
   return (
     <img
       className="pixel-img"
@@ -180,7 +190,6 @@ export function Room({ dragHandlers }: RoomProps) {
   const energy = useStore((s) => s.pet.stats.energy);
   const position = useStore((s) => s.pet.position);
   const placed_items = useStore((s) => s.placed_items);
-  const inventory = useStore((s) => s.inventory);
   const coins = useStore((s) => s.coins);
 
   const { bind } = useDragController(wrapperRef, dragHandlers);
@@ -191,9 +200,6 @@ export function Room({ dragHandlers }: RoomProps) {
   useEffect(() => {
     prevStateRef.current = currentState;
   });
-
-  const catIsPooping = currentState === 'pooping';
-  const firstToy = placed_items.find((p) => p.type === 'toy');
 
   useEffect(() => {
     const arena = catArenaBounds(roomBoundsFor(wrapperRef.current));
@@ -221,33 +227,6 @@ export function Room({ dragHandlers }: RoomProps) {
       return true;
     },
     [placed_items],
-  );
-
-  // ── Start dragging an inventory item ─────────────────────────────────────
-  const startInventoryDrag = useCallback(
-    (entryId: string, e: React.PointerEvent) => {
-      const entry = inventory.find((i) => i.id === entryId);
-      if (!entry) return;
-      const roomEl = wrapperRef.current;
-      if (!roomEl) return;
-      const rect = roomEl.getBoundingClientRect();
-      const x = e.clientX - rect.left - entry.width / 2;
-      const y = e.clientY - rect.top - entry.height / 2;
-      const g: DragGhost = {
-        kind: 'inventory',
-        id: entryId,
-        entry,
-        x,
-        y,
-        offsetX: entry.width / 2,
-        offsetY: entry.height / 2,
-        valid: isValidDrop(entry, x, y),
-      };
-      setGhost(g);
-      // Capture on the room element so move events keep coming
-      try { (roomEl as HTMLElement & { setPointerCapture?: (id: number) => void }).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
-    },
-    [inventory, isValidDrop],
   );
 
   // ── Start dragging a placed item ──────────────────────────────────────────
@@ -356,20 +335,11 @@ export function Room({ dragHandlers }: RoomProps) {
         <PlacedItemSprite
           key={item.id}
           item={item}
-          catIsPooping={catIsPooping}
+          currentState={currentState}
+          catPosition={position}
           onDragStart={startPlacedDrag}
         />
       ))}
-
-      {/* Inventory items being dragged from drawer — show as ghosts in Room */}
-      {inventory.map((entry) => {
-        // Only show a ghost for the item currently being dragged
-        if (ghost?.kind === 'inventory' && ghost.id === entry.id) return null;
-        return null; // inventory items not shown in room until placed
-      })}
-
-      {/* Toy-action overlay */}
-      {firstToy && !ghost && <ToyActionOverlay x={firstToy.x} y={firstToy.y} />}
 
       {/* Cat */}
       <Sprite_Renderer
@@ -402,70 +372,6 @@ export function Room({ dragHandlers }: RoomProps) {
             zIndex: 50,
           }}
         />
-      )}
-
-      {/* Inventory drag hint — show items from inventory as draggable chips at bottom */}
-      {inventory.length > 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 8,
-            left: 0,
-            right: 0,
-            display: 'flex',
-            gap: 8,
-            justifyContent: 'center',
-            pointerEvents: 'auto',
-            zIndex: 20,
-          }}
-        >
-          {inventory.map((entry) => (
-            <div
-              key={entry.id}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 2,
-                cursor: 'grab',
-                touchAction: 'none',
-              }}
-              onPointerDown={(e) => {
-                if (e.button !== 0 || !e.isPrimary) return;
-                e.stopPropagation();
-                startInventoryDrag(entry.id, e);
-              }}
-            >
-              <img
-                className="pixel-img"
-                src={ghostSpriteUrl(entry.type)}
-                alt={LABELS[entry.type]}
-                draggable={false}
-                style={{
-                  width: Math.min(entry.width, 48),
-                  height: Math.min(entry.height, 48),
-                  objectFit: 'contain',
-                  background: 'rgba(46,24,54,0.75)',
-                  borderRadius: 6,
-                  border: '2px solid var(--primary-300, #c5a414)',
-                  padding: 2,
-                }}
-              />
-              <span
-                style={{
-                  color: 'var(--primary-200, #e1bb17)',
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 800,
-                  fontSize: 9,
-                  textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-                  pointerEvents: 'none',
-                }}
-              >
-                {LABELS[entry.type]}
-              </span>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );

@@ -94,7 +94,6 @@ export function Sprite_Renderer({
 
   const src = errored ? ASSET_MAP.idle[0] : frames[frameIndex] ?? frames[0] ?? ASSET_MAP.idle[0];
   const mirrored = currentState === 'walking_left' || currentState === 'clicked_left';
-  const carriedInset = currentState === 'carried' ? 16 : 0;
 
   return (
     <img
@@ -111,7 +110,7 @@ export function Sprite_Renderer({
         width: W_CAT,
         height: H_CAT,
         boxSizing: 'border-box',
-        padding: carriedInset,
+        objectFit: 'contain',
         transform: mirrored ? 'scaleX(-1)' : undefined,
         userSelect: 'none',
         WebkitUserSelect: 'none',

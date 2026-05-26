@@ -1,8 +1,8 @@
 import { GameButton, GameIcon } from '../components/GameUI';
 import { ASSET_MAP } from '../assets/Asset_Map';
-import { ROOM, Y_FLOOR } from '../engine/coords';
+import { ROOM } from '../engine/coords';
 import { LABELS } from '../features/shop/shop';
-import { removePlaced, tryPlace } from '../features/shop/inventory';
+import { removePlaced, tryPlaceInRoom } from '../features/shop/inventory';
 import { useStore } from '../state/store';
 import { showToast } from './Toast';
 import type { FurnitureType, InventoryEntry, PlacedItem } from '../state/types';
@@ -32,6 +32,16 @@ function spriteUrlFor(type: FurnitureType): string {
   }
 }
 
+function currentRoomBounds() {
+  const roomEl = document.querySelector<HTMLElement>('.mochi-room');
+  return {
+    left: 0,
+    top: 0,
+    right: roomEl?.clientWidth ?? ROOM.right,
+    bottom: roomEl?.clientHeight ?? ROOM.bottom,
+  };
+}
+
 /**
  * Find a non-overlapping in-bounds floor slot for an inventory entry.
  * Sweeps the floor row left→right starting at x=32 in steps of width+16.
@@ -40,8 +50,9 @@ function spriteUrlFor(type: FurnitureType): string {
 function findFreeFloorSlot(entry: InventoryEntry): { x: number; y: number } | null {
   const state = useStore.getState();
   const placed = state.placed_items;
-  const y = Y_FLOOR - entry.height;
-  for (let x = 32; x + entry.width <= ROOM.right - 32; x += entry.width + 16) {
+  const room = currentRoomBounds();
+  const y = room.bottom - entry.height - 14;
+  for (let x = 24; x + entry.width <= room.right - 24; x += entry.width + 16) {
     const candidate = { x, y, width: entry.width, height: entry.height };
     const overlap = placed.some(
       (p) =>
@@ -66,7 +77,7 @@ function InventoryRow({ entry }: InventoryRowProps) {
       showToast('Tidak ada ruang kosong di lantai.', 'warning');
       return;
     }
-    const result = tryPlace(entry.id, slot);
+    const result = tryPlaceInRoom(entry.id, slot, currentRoomBounds());
     if (result.ok) {
       showToast(`${LABELS[entry.type]} ditempatkan.`, 'info');
       return;
@@ -75,17 +86,31 @@ function InventoryRow({ entry }: InventoryRowProps) {
       showToast('Item tidak ditemukan di inventaris.', 'error');
       return;
     }
+    if (result.reason === 'overlap') {
+      showToast('Area itu sudah terisi barang lain.', 'warning');
+      return;
+    }
+    if (result.reason === 'out_of_bounds') {
+      showToast('Barang harus tetap di area lantai rumah.', 'warning');
+      return;
+    }
     showToast('Gagal menempatkan item.', 'error');
   }
   return (
     <div
       style={{
         display: 'flex',
-        gap: 12,
+        flex: '0 0 136px',
+        minHeight: 168,
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: 8,
         alignItems: 'center',
-        padding: 8,
-        background: 'var(--secondary-500, #42224d)',
+        padding: 10,
+        background: 'rgba(255,255,255,0.92)',
+        border: '2px solid var(--meow-border)',
         borderRadius: 8,
+        scrollSnapAlign: 'start',
       }}
     >
       <img
@@ -93,20 +118,21 @@ function InventoryRow({ entry }: InventoryRowProps) {
         src={spriteUrlFor(entry.type)}
         alt={LABELS[entry.type]}
         draggable={false}
-        style={{ width: 48, height: 48, objectFit: 'contain' }}
+        style={{ width: 60, height: 60, objectFit: 'contain' }}
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ width: '100%', minWidth: 0, textAlign: 'center' }}>
         <div
           style={{
-            color: 'var(--primary-200, #e1bb17)',
-            fontFamily: 'Inter, sans-serif',
+            color: 'var(--meow-text)',
+            fontFamily: 'var(--meow-body)',
             fontWeight: 800,
             fontSize: 12,
+            lineHeight: 1.15,
           }}
         >
           {LABELS[entry.type]}
         </div>
-        <div style={{ color: 'var(--secondary-100, #d96eff)', fontSize: 10, fontWeight: 700 }}>
+        <div style={{ color: 'var(--meow-text-muted)', fontSize: 10, fontWeight: 700, marginTop: 3 }}>
           {entry.width}×{entry.height} px
         </div>
       </div>
@@ -130,11 +156,17 @@ function PlacedRow({ item }: PlacedRowProps) {
     <div
       style={{
         display: 'flex',
-        gap: 12,
+        flex: '0 0 128px',
+        minHeight: 142,
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: 8,
         alignItems: 'center',
-        padding: 8,
-        background: 'var(--secondary-400, #5b2f6b)',
+        padding: 10,
+        background: 'rgba(138,0,0,0.08)',
+        border: '2px solid rgba(138,0,0,0.18)',
         borderRadius: 8,
+        scrollSnapAlign: 'start',
       }}
     >
       <img
@@ -142,21 +174,22 @@ function PlacedRow({ item }: PlacedRowProps) {
         src={spriteUrlFor(item.type)}
         alt={LABELS[item.type]}
         draggable={false}
-        style={{ width: 48, height: 48, objectFit: 'contain' }}
+        style={{ width: 54, height: 54, objectFit: 'contain' }}
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ width: '100%', minWidth: 0, textAlign: 'center' }}>
         <div
           style={{
-            color: 'var(--primary-200, #e1bb17)',
-            fontFamily: 'Inter, sans-serif',
+            color: 'var(--meow-text)',
+            fontFamily: 'var(--meow-body)',
             fontWeight: 800,
             fontSize: 12,
+            lineHeight: 1.15,
           }}
         >
           {LABELS[item.type]}
         </div>
-        <div style={{ color: 'var(--secondary-100, #d96eff)', fontSize: 10, fontWeight: 700 }}>
-          ({item.x}, {item.y})
+        <div style={{ color: 'var(--meow-text-muted)', fontSize: 10, fontWeight: 700, marginTop: 3 }}>
+          Sudah di lantai
         </div>
       </div>
       <GameButton
@@ -188,7 +221,7 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.6)',
+        background: 'linear-gradient(180deg, transparent 0%, rgba(29,41,61,0.22) 100%)',
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
@@ -198,13 +231,14 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '100%',
-          maxWidth: 430,
-          maxHeight: '80dvh',
-          background: 'var(--secondary-600, #2e1836)',
+          width: '100vw',
+          maxHeight: '46dvh',
+          background: 'var(--meow-surface)',
           display: 'flex',
           flexDirection: 'column',
-          borderRadius: '16px 16px 0 0',
+          borderRadius: '18px 18px 0 0',
+          borderTop: '2px solid var(--meow-border)',
+          boxShadow: '0 -16px 44px rgba(29,41,61,0.24)',
           paddingBottom: 'env(safe-area-inset-bottom, 0)',
         }}
       >
@@ -213,12 +247,12 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: 12,
+            padding: '12px 14px',
             minHeight: 52,
-            borderBottom: '2px solid var(--secondary-500, #42224d)',
+            borderBottom: '1px solid var(--meow-border)',
           }}
         >
-          <strong style={{ color: 'var(--primary-200, #e1bb17)', fontSize: 14 }}>
+          <strong style={{ color: 'var(--meow-text)', fontSize: 14 }}>
             Inventaris
           </strong>
           <GameButton
@@ -233,10 +267,10 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: 12,
+            padding: '12px 14px 16px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 16,
+            gap: 14,
           }}
         >
           <section>
@@ -244,7 +278,7 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
               style={{
                 margin: 0,
                 marginBottom: 8,
-                color: 'var(--primary-200, #e1bb17)',
+                color: 'var(--meow-text)',
                 fontSize: 11,
                 fontWeight: 800,
                 display: 'flex',
@@ -255,11 +289,19 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
               <GameIcon name="add" /> Belum Ditempatkan ({inventory.length})
             </h3>
             {inventory.length === 0 ? (
-              <div style={{ color: 'var(--secondary-100, #d96eff)', fontSize: 11, padding: 8 }}>
+              <div style={{ color: 'var(--meow-text-muted)', fontSize: 11, padding: 8 }}>
                 Beli furnitur dari Toko untuk menambahkan.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  overflowX: 'auto',
+                  paddingBottom: 4,
+                  scrollSnapType: 'x mandatory',
+                }}
+              >
                 {inventory.map((e) => (
                   <InventoryRow key={e.id} entry={e} />
                 ))}
@@ -271,7 +313,7 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
               style={{
                 margin: 0,
                 marginBottom: 8,
-                color: 'var(--primary-200, #e1bb17)',
+                color: 'var(--meow-text)',
                 fontSize: 11,
                 fontWeight: 800,
                 display: 'flex',
@@ -282,11 +324,19 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
               <GameIcon name="check" /> Ditempatkan ({placed_items.length})
             </h3>
             {placed_items.length === 0 ? (
-              <div style={{ color: 'var(--secondary-100, #d96eff)', fontSize: 11, padding: 8 }}>
+              <div style={{ color: 'var(--meow-text-muted)', fontSize: 11, padding: 8 }}>
                 Belum ada furnitur yang ditempatkan.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  overflowX: 'auto',
+                  paddingBottom: 4,
+                  scrollSnapType: 'x mandatory',
+                }}
+              >
                 {placed_items.map((p) => (
                   <PlacedRow key={p.id} item={p} />
                 ))}
