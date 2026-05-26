@@ -20,7 +20,7 @@ describe('Boot sequence offline catch-up', () => {
     vi.clearAllMocks();
   });
 
-  it('wakes up the cat (sets state to idle) if energy reaches 100 while sleeping offline', async () => {
+  it('keeps the cat sleeping if energy reaches 100 while sleeping offline', async () => {
     useStore.getState()._resetToDefaults();
     
     // Set pet to sleeping and energy to 80, checked 2 hours ago
@@ -40,7 +40,7 @@ describe('Boot sequence offline catch-up', () => {
 
     const pet = useStore.getState().pet;
     expect(pet.stats.energy).toBe(100);
-    expect(pet.currentState).toBe('idle'); // Woke up!
+    expect(pet.currentState).toBe('sleeping');
   });
 
   it('keeps the cat sleeping if energy is still below 100 after offline catch-up', async () => {

@@ -35,9 +35,6 @@ export async function boot(): Promise<BootResult> {
   const state = useStore.getState();
   const result = applyOfflineCatchUp({ pet: state.pet });
   state.setPetStatsAndLastChecked(result.newStats, result.newLastChecked);
-  if (state.pet.currentState === 'sleeping' && result.newStats.energy === 100) {
-    state.setPetState('idle');
-  }
 
   // 5. Wait for asset preload to finish before first paint (Req 7.8).
   await preloadPromise;
