@@ -10,7 +10,6 @@ import {
   W_CAT,
 } from './coords';
 import type { StateEvent } from './state_machine';
-import { playClick, playCatSound } from './sound';
 
 export interface DragControllerHandlers {
   onCarryStart?: () => void;
@@ -21,13 +20,14 @@ export interface DragControllerHandlers {
   onPoke?: (facingLeft: boolean) => void;
 }
 
-// Hold threshold: pointer held longer than this → lift; shorter → poke
-const HOLD_MS = 300;
+const DOUBLE_TAP_MS = 320;
+const DOUBLE_TAP_DISTANCE = 28;
 
 let _activePointerId: number | null = null;
 let _pointerOffset: { x: number; y: number } | null = null;
-let _pointerDownTime = 0;
 let _hasMoved = false;
+let _lastTapTime = 0;
+let _lastTapPos: { x: number; y: number } | null = null;
 // Track which direction the cat is facing for poke animation
 let _facingLeft = false;
 
@@ -92,15 +92,14 @@ export function useDragController(
         y: e.clientY - state.pet.position.y,
       };
       _activePointerId = e.pointerId;
-      _pointerDownTime = Date.now();
       _hasMoved = false;
 
       const target = e.currentTarget as HTMLElement & { setPointerCapture?: (id: number) => void };
       try { target.setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
 
-      // Don't dispatch yet — wait for pointerUp to decide poke vs lift
+      // Don't dispatch yet: single tap pokes, double tap lifts.
     },
-    [handlers],
+    [],
   );
 
   const handlePointerMove = useCallback(
@@ -141,17 +140,34 @@ export function useDragController(
       const target = e.currentTarget as HTMLElement & { releasePointerCapture?: (id: number) => void };
       try { target.releasePointerCapture?.(e.pointerId); } catch { /* ignore */ }
 
-      const heldMs = Date.now() - _pointerDownTime;
-      const isHold = heldMs >= HOLD_MS || _hasMoved;
+      const tapPos = { x: e.clientX, y: e.clientY };
+      const now = Date.now();
+      const movedFar = _hasMoved;
       _activePointerId = null;
       _pointerOffset = null;
 
       const state = useStore.getState();
       const cs = state.pet.currentState;
 
-      if (!isHold && cs !== 'carried') {
-        // Short tap → poke (clicked animation + sound)
-        void playCatSound('poke');
+      if (cs !== 'carried') {
+        if (movedFar) return;
+
+        const isDoubleTap =
+          _lastTapPos !== null &&
+          now - _lastTapTime <= DOUBLE_TAP_MS &&
+          Math.hypot(tapPos.x - _lastTapPos.x, tapPos.y - _lastTapPos.y) <= DOUBLE_TAP_DISTANCE;
+
+        _lastTapTime = now;
+        _lastTapPos = tapPos;
+
+        if (isDoubleTap) {
+          _lastTapTime = 0;
+          _lastTapPos = null;
+          handlers.onCarryStart?.();
+          handlers.onEvent?.({ kind: 'pointer_down' });
+          return;
+        }
+
         handlers.onPoke?.(_facingLeft);
         return;
       }
@@ -163,11 +179,6 @@ export function useDragController(
         const targetType = resolution?.type ?? null;
         handlers.onDropResolved?.(targetType);
         handlers.onEvent?.({ kind: 'drop_resolved', targetType });
-      } else if (isHold) {
-        // Long press → lift
-        void playCatSound('lift');
-        handlers.onCarryStart?.();
-        handlers.onEvent?.({ kind: 'pointer_down' });
       }
     },
     [handlers],
@@ -214,6 +225,8 @@ export function useDragController(
 export function _resetForTest(): void {
   _activePointerId = null;
   _pointerOffset = null;
+  _lastTapTime = 0;
+  _lastTapPos = null;
 }
 
 export function _getActivePointerIdForTest(): number | null {

@@ -3,9 +3,7 @@ import { useStore } from '../state/store';
 import { Sprite_Renderer } from './Sprite_Renderer';
 import {
   ASSET_MAP,
-  FRAME_DURATION_MS_ACTIVE,
   getRoomBackgroundForHour,
-  type FrameUrl,
 } from '../assets/Asset_Map';
 import { catArenaBounds, catRectAt, clampPosition, H_CAT, ROOM, W_CAT } from '../engine/coords';
 import { useDragController, type DragControllerHandlers } from '../engine/Drag_Controller';
@@ -47,51 +45,6 @@ function useTimeOfDayBackground(): string {
   return bg;
 }
 
-// ─── Animated item sprite ────────────────────────────────────────────────────
-
-function AnimatedItemSprite({
-  frames,
-  item,
-  alt,
-  onDragStart,
-}: {
-  frames: FrameUrl[];
-  item: PlacedItem;
-  alt: string;
-  onDragStart: (itemId: string, e: React.PointerEvent) => void;
-}) {
-  const [frame, setFrame] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => {
-      setFrame((f) => (f + 1) % frames.length);
-    }, FRAME_DURATION_MS_ACTIVE);
-    return () => clearInterval(id);
-  }, [frames.length]);
-  return (
-    <img
-      className="pixel-img"
-      src={frames[frame] ?? frames[0]}
-      alt={alt}
-      draggable={false}
-      style={{
-        position: 'absolute',
-        left: item.x,
-        top: item.y,
-        width: item.width,
-        height: item.height,
-        cursor: 'grab',
-        touchAction: 'none',
-        userSelect: 'none',
-      }}
-      onPointerDown={(e) => {
-        if (e.button !== 0 || !e.isPrimary) return;
-        e.stopPropagation();
-        onDragStart(item.id, e);
-      }}
-    />
-  );
-}
-
 // ─── Placed item sprite ───────────────────────────────────────────────────────
 
 function spriteUrlFor(type: FurnitureType, catIsPooping: boolean): string {
@@ -116,16 +69,7 @@ function PlacedItemSprite({ item, currentState, catPosition, onDragStart }: Plac
     (item.type === 'scratcher' && currentState === 'scratching' && activeUnderCat) ||
     (item.type === 'litterbox' && currentState === 'pooping' && activeUnderCat);
 
-  if (item.type === 'toy' && isBeingUsed) {
-    return (
-      <AnimatedItemSprite
-        frames={ASSET_MAP.toy_action}
-        item={item}
-        alt={LABELS[item.type]}
-        onDragStart={onDragStart}
-      />
-    );
-  }
+  if (isBeingUsed) return null;
 
   const src = spriteUrlFor(item.type, item.type === 'litterbox' && isBeingUsed);
   return (

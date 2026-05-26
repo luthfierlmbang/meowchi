@@ -46,7 +46,7 @@ export function playClick(): void {
  */
 export async function playCatSound(kind: 'poke' | 'lift'): Promise<void> {
   const clone = getAudio(MEOW_SOUND).cloneNode() as HTMLAudioElement;
-  clone.volume = kind === 'lift' ? 0.4 : 0.7;
+  clone.volume = kind === 'lift' ? 0.22 : 0.35;
   // For lift, slow down playback slightly for a softer feel
   if (kind === 'lift') clone.playbackRate = 0.8;
   void clone.play().catch(() => {});

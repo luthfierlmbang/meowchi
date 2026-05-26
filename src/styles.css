@@ -71,6 +71,7 @@ body,
 #root {
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
 button,
@@ -86,10 +87,12 @@ button {
 .meow-screen {
   position: relative;
   display: flex;
-  width: 100vw;
-  max-width: none;
-  height: 100dvh;
-  min-height: 100dvh;
+  width: min(100vw, 430px);
+  max-width: 430px;
+  height: var(--app-height, 100dvh);
+  min-height: var(--app-height, 100dvh);
+  max-height: var(--app-height, 100dvh);
+  margin: 0 auto;
   overflow: hidden;
   flex-direction: column;
   background: var(--meow-bg);
@@ -98,7 +101,7 @@ button {
 }
 
 .meow-game-shell {
-  height: 100dvh;
+  height: var(--app-height, 100dvh);
   min-height: 0;
   background: var(--meow-bg);
 }
@@ -1178,10 +1181,12 @@ button {
 .splash-screen {
   position: relative;
   display: flex;
-  width: 100vw;
-  max-width: none;
-  height: 100dvh;
-  min-height: 100dvh;
+  width: min(100vw, 430px);
+  max-width: 430px;
+  height: var(--app-height, 100dvh);
+  min-height: var(--app-height, 100dvh);
+  max-height: var(--app-height, 100dvh);
+  margin: 0 auto;
   overflow: hidden;
   flex-direction: column;
   background: #8a0000;
