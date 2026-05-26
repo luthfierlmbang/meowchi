@@ -27,6 +27,7 @@ import { ShopModal } from './ui/ShopModal';
 import { InventoryDrawer } from './ui/InventoryDrawer';
 import { PhotoAlbumModal } from './ui/PhotoAlbumModal';
 import { HabitTrackerModal } from './ui/HabitTrackerModal';
+import { SettingsModal } from './ui/SettingsModal';
 import { SplashScreen } from './ui/SplashScreen';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { IntroScreens, type IntroStep } from './ui/IntroScreens';
@@ -66,6 +67,7 @@ export default function App() {
   const [habitOpen, setHabitOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const currentState = useStore((s) => s.pet.currentState);
   const ready = bootStage === 'ready';
@@ -297,6 +299,7 @@ export default function App() {
         onChat={() => setChatOpen(true)}
         onAlbum={() => setAlbumOpen(true)}
         onInventory={() => setInventoryOpen(true)}
+        onSettings={() => setSettingsOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -306,6 +309,7 @@ export default function App() {
       <PhotoAlbumModal open={albumOpen} onClose={() => setAlbumOpen(false)} />
       <HabitTrackerModal open={habitOpen} onClose={() => setHabitOpen(false)} />
       <InventoryDrawer open={inventoryOpen} onClose={() => setInventoryOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {/* Toast layer */}
       <Toast />

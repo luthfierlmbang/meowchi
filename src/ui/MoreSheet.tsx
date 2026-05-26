@@ -8,6 +8,7 @@ export interface MoreSheetProps {
   onChat: () => void;
   onAlbum: () => void;
   onInventory: () => void;
+  onSettings: () => void;
   onLogout: () => void;
   isSleeping: boolean;
 }
@@ -46,6 +47,7 @@ export function MoreSheet({
   onChat,
   onAlbum,
   onInventory,
+  onSettings,
   onLogout,
   isSleeping,
 }: MoreSheetProps) {
@@ -90,6 +92,12 @@ export function MoreSheet({
           label="Inventaris"
           sublabel="Kelola furnitur ruangan"
           onClick={() => { onInventory(); onClose(); }}
+        />
+        <SheetBtn
+          icon="settings"
+          label="Pengaturan"
+          sublabel="Atur volume suara & musik"
+          onClick={() => { onSettings(); onClose(); }}
         />
         <SheetBtn
           icon="key"

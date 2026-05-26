@@ -58,6 +58,8 @@ export interface PersistedState {
   coins: number;
   habit_records: HabitRecord[];
   routine_state: RoutineState;
+  bgmVolume: number;
+  sfxVolume: number;
 }
 
 // Top-level localStorage shape
@@ -89,5 +91,7 @@ export function createDefaultPersistedState(): PersistedState {
     routine_state: {
       maxLocalDateSeen: '',
     },
+    bgmVolume: 0.5,
+    sfxVolume: 0.5,
   };
 }

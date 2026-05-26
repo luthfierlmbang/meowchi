@@ -241,6 +241,11 @@ function validatePersistedState(s: unknown): s is PersistedState {
   const rs = s.routine_state as { maxLocalDateSeen?: unknown };
   if (typeof rs.maxLocalDateSeen !== 'string') return false;
 
+  // bgmVolume and sfxVolume (optional for backward compatibility)
+  const obj = s as Record<string, unknown>;
+  if (obj.bgmVolume !== undefined && (typeof obj.bgmVolume !== 'number' || !Number.isFinite(obj.bgmVolume))) return false;
+  if (obj.sfxVolume !== undefined && (typeof obj.sfxVolume !== 'number' || !Number.isFinite(obj.sfxVolume))) return false;
+
   return true;
 }
 
@@ -273,6 +278,9 @@ export interface StoreActions {
 
   // Stat delta application (e.g., post-animation effects)
   atomicApplyStatDelta: (delta: Partial<Stats>, setExact?: Partial<Stats>) => void;
+
+  setBgmVolume: (vol: number) => void;
+  setSfxVolume: (vol: number) => void;
 
   /** Test-only helper to reset to default state. */
   _resetToDefaults: () => void;
@@ -405,6 +413,8 @@ export const useStore = create<Store>()(
       },
 
       _resetToDefaults: () => set(() => createDefaultPersistedState()),
+      setBgmVolume: (vol) => set(() => ({ bgmVolume: Math.max(0, Math.min(1, vol)) })),
+      setSfxVolume: (vol) => set(() => ({ sfxVolume: Math.max(0, Math.min(1, vol)) })),
     }),
     {
       name: PERSIST_KEY,
@@ -418,6 +428,8 @@ export const useStore = create<Store>()(
         coins: s.coins,
         habit_records: s.habit_records,
         routine_state: s.routine_state,
+        bgmVolume: s.bgmVolume,
+        sfxVolume: s.sfxVolume,
       }),
       // No in-place downgrade (Req 13.5): if persisted version > current, return
       // defaults so the next debounced write rewrites the envelope at version 1.
@@ -433,6 +445,8 @@ export const useStore = create<Store>()(
             coins: persisted.coins,
             habit_records: persisted.habit_records,
             routine_state: persisted.routine_state,
+            bgmVolume: persisted.bgmVolume ?? 0.5,
+            sfxVolume: persisted.sfxVolume ?? 0.5,
           };
         }
         return createDefaultPersistedState();
@@ -451,6 +465,8 @@ export const useStore = create<Store>()(
           coins: persisted.coins,
           habit_records: persisted.habit_records,
           routine_state: persisted.routine_state,
+          bgmVolume: persisted.bgmVolume ?? current.bgmVolume,
+          sfxVolume: persisted.sfxVolume ?? current.sfxVolume,
         };
       },
     },

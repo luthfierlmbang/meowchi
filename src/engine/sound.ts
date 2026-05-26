@@ -2,6 +2,7 @@
  * Sound engine — uses HTMLAudioElement for zero-latency playback.
  * Cat sounds are synthesized via Web Audio API (no external asset needed).
  */
+import { useStore } from '../state/store';
 
 // ── HTMLAudio for preloaded click ──────────────────────────────────────────
 
@@ -32,6 +33,32 @@ let _backgroundMusic: HTMLAudioElement | null = null;
 let _purringSleep: HTMLAudioElement | null = null;
 let _audioUnlocked = false;
 
+function getBgmMultiplier(): number {
+  try {
+    return useStore.getState().bgmVolume;
+  } catch {
+    return 0.5;
+  }
+}
+
+function getSfxMultiplier(): number {
+  try {
+    return useStore.getState().sfxVolume;
+  } catch {
+    return 0.5;
+  }
+}
+
+export function updateVolumes(): void {
+  const bgmMul = getBgmMultiplier();
+  if (_backgroundMusic) {
+    _backgroundMusic.volume = BGM_VOLUME * bgmMul;
+  }
+  if (_purringSleep) {
+    _purringSleep.volume = PURRING_VOLUME * bgmMul;
+  }
+}
+
 export function preloadSounds(): void {
   getAudio(CLICK_SOUND);
   getAudio(MEOW_SOUND);
@@ -43,7 +70,7 @@ export function preloadSounds(): void {
 export function playSound(url: string, volume = 0.6): void {
   try {
     const clone = getAudio(url).cloneNode() as HTMLAudioElement;
-    clone.volume = volume;
+    clone.volume = volume * getSfxMultiplier();
     void clone.play().catch(() => {});
   } catch { /* ignore */ }
 }
@@ -60,15 +87,15 @@ function getLoopingAudio(url: string, volume: number): HTMLAudioElement {
 }
 
 export function startBackgroundMusic(): void {
-  _backgroundMusic = _backgroundMusic ?? getLoopingAudio(BACKGROUND_MUSIC, BGM_VOLUME);
-  _backgroundMusic.volume = BGM_VOLUME;
+  _backgroundMusic = _backgroundMusic ?? getLoopingAudio(BACKGROUND_MUSIC, BGM_VOLUME * getBgmMultiplier());
+  _backgroundMusic.volume = BGM_VOLUME * getBgmMultiplier();
   void _backgroundMusic.play().catch(() => {});
 }
 
 export function setSleepPurring(enabled: boolean): void {
-  _purringSleep = _purringSleep ?? getLoopingAudio(PURRING_SLEEP_SOUND, PURRING_VOLUME);
+  _purringSleep = _purringSleep ?? getLoopingAudio(PURRING_SLEEP_SOUND, PURRING_VOLUME * getBgmMultiplier());
   if (enabled) {
-    _purringSleep.volume = PURRING_VOLUME;
+    _purringSleep.volume = PURRING_VOLUME * getBgmMultiplier();
     void _purringSleep.play().catch(() => {});
     return;
   }
@@ -92,7 +119,8 @@ export function unlockAmbientAudio(isSleeping: () => boolean): void {
 export async function playCatSound(kind: 'poke' | 'lift'): Promise<void> {
   const url = MEOW_VARIANTS[Math.floor(Math.random() * MEOW_VARIANTS.length)];
   const clone = getAudio(url).cloneNode() as HTMLAudioElement;
-  clone.volume = kind === 'lift' ? 0.22 : 0.35;
+  const baseVolume = kind === 'lift' ? 0.22 : 0.35;
+  clone.volume = baseVolume * getSfxMultiplier();
   // For lift, slow down playback slightly for a softer feel
   if (kind === 'lift') clone.playbackRate = 0.8;
   void clone.play().catch(() => {});
