@@ -41,7 +41,7 @@ export function ChatPopup({ open, onClose }: ChatPopupProps) {
 
   const stats = useStore((s) => s.pet.stats);
   const currentState = useStore((s) => s.pet.currentState);
-  const history = useStore((s) => s.chatHistory);
+  const history = useStore((s) => s.chatHistory) || [];
 
   const happinessLocked = stats.happiness === 0;
   // Read config snapshot per render so feature-disable (auth/quota) propagates

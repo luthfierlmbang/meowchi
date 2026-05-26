@@ -51,7 +51,8 @@ export function runTickOnce(handlers: TickHandlers = {}): void {
       cur.energy <= STAT_THRESHOLD ||
       cur.bladder <= STAT_THRESHOLD);
 
-  const next = applyDecay(cur, TICK_DELTA_SECONDS, hungerZero, anyLow40);
+  const isSleeping = state.pet.currentState === 'sleeping';
+  const next = applyDecay(cur, TICK_DELTA_SECONDS, hungerZero, anyLow40, isSleeping);
   state.setPetStatsAndLastChecked(next, Date.now());
 
   // Forced transitions check AFTER decay (Req 4.10, 4.11)
@@ -60,6 +61,8 @@ export function runTickOnce(handlers: TickHandlers = {}): void {
       handlers.onForcedEvent({ kind: 'forced_pooping' });
     } else if (next.energy === 0 && cur.energy > 0) {
       handlers.onForcedEvent({ kind: 'forced_sleeping' });
+    } else if (isSleeping && next.energy === 100) {
+      handlers.onForcedEvent({ kind: 'wake_up' });
     }
   }
 }

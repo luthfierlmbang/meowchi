@@ -184,7 +184,7 @@ export default function App() {
       const hour = new Date().getHours();
       const state = useStore.getState();
       const cs = state.pet.currentState;
-      if (isSleepHour(hour) && cs !== 'sleeping') {
+      if (isSleepHour(hour) && cs !== 'sleeping' && state.pet.stats.energy < 100) {
         cancelAllTransientTimers();
         dispatch({ kind: 'sleep_button' });
       } else if (!isSleepHour(hour) && cs === 'sleeping') {

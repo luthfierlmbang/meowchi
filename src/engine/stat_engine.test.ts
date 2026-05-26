@@ -148,3 +148,32 @@ describe('clamp01', () => {
     );
   });
 });
+
+describe('Sleeping Energy Recharge Logic in stat_engine', () => {
+  it('applyDecay increases energy during sleep', () => {
+    const initial: Stats = { hunger: 100, energy: 50, bladder: 100, happiness: 100 };
+    const out = applyDecay(initial, 3600, false, false, true);
+    expect(out.energy).toBe(70); // 50 + 20
+    expect(out.hunger).toBeLessThan(100); // hunger decays normally
+  });
+
+  it('projectPiecewise increases energy during sleep up to 100', () => {
+    const initial: Stats = { hunger: 100, energy: 90, bladder: 100, happiness: 100 };
+    const out = projectPiecewise(initial, 2, true); // 2 hours
+    expect(out.energy).toBe(100); // 90 + 20*2 = 130 -> clamps to 100
+  });
+
+  it('applyOfflineCatchUp handles sleeping state', () => {
+    const now = 1700000000000;
+    const state = {
+      pet: {
+        stats: { hunger: 100, energy: 50, bladder: 100, happiness: 100 },
+        currentState: 'sleeping' as const,
+        position: { x: 0, y: 0 },
+        lastChecked: now - 3600000, // 1 hour ago
+      },
+    };
+    const r = applyOfflineCatchUp(state, now);
+    expect(r.newStats.energy).toBe(70); // 50 + 20
+  });
+});

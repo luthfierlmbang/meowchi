@@ -5,6 +5,9 @@ export const HUNGER_RATE = 6;
 export const ENERGY_RATE = 4;
 export const BLADDER_RATE = 5;
 
+// Energy recharge rate per hour during sleep
+export const ENERGY_RECHARGE_RATE = 20;
+
 // Extra Happiness decay rates per hour (Req 2.4, 2.6)
 export const HAPPINESS_LOW_RATE = 6;          // when any HEB ≤ 40 (Hunger > 0)
 export const HAPPINESS_HUNGER_ZERO_RATE = 30; // when Hunger = 0 (dominates, does NOT stack)
@@ -68,10 +71,12 @@ export function applyDecay(
   deltaSeconds: number,
   hungerZero: boolean,
   anyLow40: boolean,
+  isSleeping: boolean = false,
 ): Stats {
   const hours = deltaSeconds / 3600;
   const hunger = clamp01(s.hunger - HUNGER_RATE * hours);
-  const energy = clamp01(s.energy - ENERGY_RATE * hours);
+  const energyRate = isSleeping ? -ENERGY_RECHARGE_RATE : ENERGY_RATE;
+  const energy = clamp01(s.energy - energyRate * hours);
   const bladder = clamp01(s.bladder - BLADDER_RATE * hours);
 
   // Happiness extra decay rule (NEVER stacks — Req 2.4 / 2.6)
@@ -97,7 +102,7 @@ export function applyDecay(
  *
  * (Req 3.3)
  */
-export function projectPiecewise(s: Stats, hours: number): Stats {
+export function projectPiecewise(s: Stats, hours: number, isSleeping: boolean = false): Stats {
   if (hours <= 0) return { ...s };
 
   let cur: Stats = { ...s };
@@ -122,17 +127,28 @@ export function projectPiecewise(s: Stats, hours: number): Stats {
     if (cur.hunger > 0 && cur.hunger <= STAT_THRESHOLD) {
       crossings.push(cur.hunger / HUNGER_RATE);
     }
-    // Energy crossing 40 (only matters if currently > 40)
-    if (cur.energy > STAT_THRESHOLD) {
-      crossings.push((cur.energy - STAT_THRESHOLD) / ENERGY_RATE);
+
+    if (isSleeping) {
+      // Energy is recovering!
+      if (cur.energy < STAT_THRESHOLD) {
+        crossings.push((STAT_THRESHOLD - cur.energy) / ENERGY_RECHARGE_RATE);
+      }
+      if (cur.energy < 100) {
+        crossings.push((100 - cur.energy) / ENERGY_RECHARGE_RATE);
+      }
+    } else {
+      // Energy crossing 40 (only matters if currently > 40)
+      if (cur.energy > STAT_THRESHOLD) {
+        crossings.push((cur.energy - STAT_THRESHOLD) / ENERGY_RATE);
+      }
+      // Energy/Bladder reaching 0
+      if (cur.energy > 0) crossings.push(cur.energy / ENERGY_RATE);
     }
+
     // Bladder crossing 40
     if (cur.bladder > STAT_THRESHOLD) {
       crossings.push((cur.bladder - STAT_THRESHOLD) / BLADDER_RATE);
     }
-    // Energy/Bladder reaching 0 (also useful boundary so segments don't
-    // overshoot when stats are already low)
-    if (cur.energy > 0) crossings.push(cur.energy / ENERGY_RATE);
     if (cur.bladder > 0) crossings.push(cur.bladder / BLADDER_RATE);
 
     let dt = remaining;
@@ -141,9 +157,10 @@ export function projectPiecewise(s: Stats, hours: number): Stats {
     }
 
     // Apply decay over dt hours with constant rates
+    const energyRate = isSleeping ? -ENERGY_RECHARGE_RATE : ENERGY_RATE;
     cur = {
       hunger: clamp01(cur.hunger - HUNGER_RATE * dt),
-      energy: clamp01(cur.energy - ENERGY_RATE * dt),
+      energy: clamp01(cur.energy - energyRate * dt),
       bladder: clamp01(cur.bladder - BLADDER_RATE * dt),
       happiness: clamp01(cur.happiness - extraRate * dt),
     };
@@ -189,7 +206,8 @@ export function applyOfflineCatchUp(
 
   const hoursPassed = dtMs / 3_600_000;
   const effectiveHours = Math.min(hoursPassed, OFFLINE_CAP_HOURS);
-  const projected = projectPiecewise(state.pet.stats, effectiveHours);
+  const isSleeping = state.pet.currentState === 'sleeping';
+  const projected = projectPiecewise(state.pet.stats, effectiveHours, isSleeping);
 
   // Integer round + clamp (Req 3.4): sub-integer reload decays round to 0
   const rounded: Stats = {
