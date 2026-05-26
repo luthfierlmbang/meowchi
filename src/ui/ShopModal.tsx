@@ -4,7 +4,7 @@
  * Requirements: 11.1, 11.2, 11.3
  * Design: §5, §15
  *
- * - Mobile-first full-screen modal (`position: fixed; inset: 0`); backdrop click closes.
+ * - Mobile-first full-screen modal (`position: absolute; inset: 0`); backdrop click closes.
  * - Vertical scrollable list; each row has ~64 px sprite + label + price + "Beli" button.
  * - Click "Beli" → `purchase(type)`. On success: info toast. On `insufficient_coins`: warning toast.
  * - Reuses `GameButton` / `GameIcon` from GameUI.
@@ -14,6 +14,7 @@ import { ASSET_MAP } from '../assets/Asset_Map';
 import { DIMS, LABELS, PRICES, purchase } from '../features/shop/shop';
 import { useStore } from '../state/store';
 import { showToast } from './Toast';
+import { MeowchiTopNav } from './MeowchiUI';
 import type { FurnitureType } from '../state/types';
 
 const TYPES: FurnitureType[] = ['scratcher', 'toy', 'litterbox'];
@@ -54,49 +55,65 @@ function ShopRow({ type, coins }: ShopRowProps) {
     <div
       style={{
         display: 'flex',
-        gap: 12,
+        gap: 14,
         alignItems: 'center',
-        padding: 12,
-        background: 'var(--secondary-500, #42224d)',
-        borderRadius: 8,
+        padding: 16,
+        background: 'var(--meow-surface)',
+        border: '2px solid #111',
+        borderRadius: 18,
+        boxShadow: '0 4px 0 #111',
       }}
     >
-      <img
-        className="pixel-img"
-        src={spriteUrlFor(type)}
-        alt={LABELS[type]}
-        draggable={false}
-        style={{ width: 64, height: 64, objectFit: 'contain' }}
-      />
-      <div style={{ flex: 1 }}>
+      <div
+        style={{
+          width: 80,
+          height: 80,
+          display: 'grid',
+          placeItems: 'center',
+          background: 'var(--meow-surface-muted)',
+          border: '2px solid #111',
+          borderRadius: 14,
+          flexShrink: 0,
+        }}
+      >
+        <img
+          className="pixel-img"
+          src={spriteUrlFor(type)}
+          alt={LABELS[type]}
+          draggable={false}
+          style={{ width: 54, height: 54, objectFit: 'contain' }}
+        />
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div
           style={{
-            color: 'var(--primary-200, #e1bb17)',
-            fontFamily: 'Inter, sans-serif',
+            color: 'var(--meow-text)',
+            fontFamily: 'var(--meow-body)',
             fontWeight: 800,
-            fontSize: 13,
+            fontSize: 15,
           }}
         >
           {LABELS[type]}
         </div>
         <div
           style={{
-            color: 'var(--secondary-100, #d96eff)',
-            fontSize: 10,
+            color: 'var(--meow-text-muted)',
+            fontFamily: 'var(--meow-body)',
+            fontSize: 11,
             fontWeight: 700,
-            marginTop: 2,
           }}
         >
-          {dims.width}×{dims.height} px
+          Ukuran: {dims.width}×{dims.height} px
         </div>
         <div
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: 4,
-            marginTop: 6,
-            color: 'var(--primary-100, #ffd41a)',
-            fontSize: 12,
+            marginTop: 4,
+            color: 'var(--meow-brand)',
+            fontFamily: 'var(--meow-body)',
+            fontSize: 14,
             fontWeight: 800,
           }}
         >
@@ -125,69 +142,50 @@ export function ShopModal({ open, onClose }: ShopModalProps) {
       aria-modal="true"
       aria-label="Toko"
       onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'stretch',
-        justifyContent: 'center',
-        zIndex: 2400,
-      }}
+      className="meow-chat-backdrop"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '100%',
-          maxWidth: 430,
-          background: 'var(--secondary-600, #2e1836)',
-          display: 'flex',
-          flexDirection: 'column',
-          paddingTop: 'env(safe-area-inset-top, 0)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0)',
-        }}
+        className="meow-screen meow-chat-screen"
       >
-        <header
+        <MeowchiTopNav title="Toko Mochi" back onBack={onClose} />
+        
+        <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: 12,
-            minHeight: 52,
-            borderBottom: '2px solid var(--secondary-500, #42224d)',
+            padding: '16px 20px 8px',
+            background: 'var(--meow-bg)',
           }}
         >
-          <strong style={{ color: 'var(--primary-200, #e1bb17)', fontSize: 14 }}>Toko</strong>
+          <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--meow-text-soft)', fontFamily: 'var(--meow-body)' }}>
+            Koin Tersedia
+          </span>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              color: 'var(--primary-100, #ffd41a)',
-              fontFamily: 'Inter, sans-serif',
-              fontSize: 13,
+              color: 'var(--meow-brand)',
+              fontFamily: 'var(--meow-body)',
+              fontSize: 18,
               fontWeight: 800,
             }}
           >
             <GameIcon name="gold" />
-            {coins.toLocaleString('id-ID')}
+            <span>{coins.toLocaleString('id-ID')}</span>
           </div>
-          <GameButton
-            iconOnly
-            iconLeft="close"
-            tone="secondary"
-            onClick={onClose}
-            aria-label="Tutup toko"
-          />
-        </header>
+        </div>
+
         <div
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: 12,
+            padding: '12px 18px 24px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 10,
+            gap: 12,
           }}
         >
           {TYPES.map((t) => (

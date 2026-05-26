@@ -219,7 +219,7 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
       aria-label="Inventaris"
       onClick={onClose}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         inset: 0,
         background: 'linear-gradient(180deg, transparent 0%, rgba(29,41,61,0.22) 100%)',
         display: 'flex',
@@ -231,8 +231,8 @@ export function InventoryDrawer({ open, onClose }: InventoryDrawerProps) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '100vw',
-          maxHeight: '46dvh',
+          width: '100%',
+          maxHeight: '46%',
           background: 'var(--meow-surface)',
           display: 'flex',
           flexDirection: 'column',

@@ -121,7 +121,7 @@ export function PhotoAlbumModal({ open, onClose }: PhotoAlbumModalProps) {
         aria-label="Album foto"
         onClick={onClose}
         style={{
-          position: 'fixed',
+          position: 'absolute',
           inset: 0,
           background: 'rgba(0,0,0,0.6)',
           display: 'flex',

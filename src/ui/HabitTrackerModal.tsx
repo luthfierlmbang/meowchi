@@ -34,6 +34,7 @@ import { isCompletedToday, markRoutineDone } from '../features/habits/habit_trac
 import { useStore } from '../state/store';
 import { HabitMainCaptureModal } from './HabitMainCaptureModal';
 import { showToast } from './Toast';
+import { MeowchiTopNav } from './MeowchiUI';
 
 type Tab = 'routine' | 'main';
 
@@ -57,55 +58,19 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
         aria-modal="true"
         aria-label="Habit tracker"
         onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'stretch',
-          justifyContent: 'center',
-          zIndex: 2200,
-        }}
+        className="meow-chat-backdrop"
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          style={{
-            width: '100%',
-            maxWidth: 430,
-            background: 'var(--secondary-600, #2e1836)',
-            display: 'flex',
-            flexDirection: 'column',
-            paddingTop: 'env(safe-area-inset-top, 0)',
-            paddingBottom: 'env(safe-area-inset-bottom, 0)',
-          }}
+          className="meow-screen meow-chat-screen"
         >
-          <header
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: 12,
-              minHeight: 52,
-              borderBottom: '2px solid var(--secondary-500, #42224d)',
-            }}
-          >
-            <strong style={{ color: 'var(--primary-200, #e1bb17)', fontSize: 14 }}>
-              Habit Tracker
-            </strong>
-            <GameButton
-              iconOnly
-              iconLeft="close"
-              tone="secondary"
-              onClick={onClose}
-              aria-label="Tutup"
-            />
-          </header>
+          <MeowchiTopNav title="Habit Tracker" back onBack={onClose} />
 
           {/* Controlled tab strip reusing GameUI's line-tab classes. */}
           <div
             className="line-tab-group"
             role="tablist"
-            style={{ width: '100%', padding: '8px 12px 0' }}
+            style={{ width: '100%', padding: '12px 18px 0', display: 'flex', borderBottom: '2px solid var(--meow-border)' }}
           >
             <button
               type="button"
@@ -114,7 +79,17 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
               aria-selected={tab === 'routine'}
               data-active={tab === 'routine'}
               onClick={() => setTab('routine')}
-              style={{ minHeight: 44 }}
+              style={{
+                minHeight: 44,
+                color: tab === 'routine' ? 'var(--meow-brand)' : 'var(--meow-text-soft)',
+                borderColor: tab === 'routine' ? 'var(--meow-brand)' : 'transparent',
+                borderBottomWidth: 3,
+                fontFamily: 'var(--meow-body)',
+                fontSize: 14,
+                fontWeight: 800,
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
             >
               Rutin
             </button>
@@ -125,7 +100,17 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
               aria-selected={tab === 'main'}
               data-active={tab === 'main'}
               onClick={() => setTab('main')}
-              style={{ minHeight: 44 }}
+              style={{
+                minHeight: 44,
+                color: tab === 'main' ? 'var(--meow-brand)' : 'var(--meow-text-soft)',
+                borderColor: tab === 'main' ? 'var(--meow-brand)' : 'transparent',
+                borderBottomWidth: 3,
+                fontFamily: 'var(--meow-body)',
+                fontSize: 14,
+                fontWeight: 800,
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
             >
               Utama
             </button>
@@ -135,10 +120,10 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
             style={{
               flex: 1,
               overflowY: 'auto',
-              padding: 12,
+              padding: '16px 18px 24px',
               display: 'flex',
               flexDirection: 'column',
-              gap: 8,
+              gap: 12,
             }}
           >
             {tab === 'routine' &&
@@ -159,32 +144,35 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 12,
-                      padding: 12,
-                      minHeight: 56,
+                      gap: 14,
+                      padding: 16,
+                      minHeight: 64,
                       background: done
-                        ? 'var(--secondary-400, #5b2f6b)'
-                        : 'var(--secondary-500, #42224d)',
-                      border: 0,
-                      borderRadius: 8,
+                        ? 'var(--meow-surface-muted)'
+                        : 'var(--meow-surface)',
+                      border: '2px solid #111',
+                      borderRadius: 18,
+                      boxShadow: done ? 'none' : '0 4px 0 #111',
                       cursor: done ? 'default' : 'pointer',
                       textAlign: 'left',
                       width: '100%',
-                      opacity: done ? 0.7 : 1,
+                      opacity: done ? 0.6 : 1,
+                      transform: done ? 'translateY(2px)' : 'none',
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    <span style={{ pointerEvents: 'none' }}>
+                    <span style={{ pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
                       <Checkbox checked={done} />
                     </span>
                     <span
                       style={{
                         flex: 1,
                         color: done
-                          ? 'var(--secondary-100, #d96eff)'
-                          : 'var(--primary-100, #ffd41a)',
-                        fontFamily: 'Inter, sans-serif',
+                          ? 'var(--meow-text-muted)'
+                          : 'var(--meow-text)',
+                        fontFamily: 'var(--meow-body)',
                         fontWeight: 800,
-                        fontSize: 12,
+                        fontSize: 13,
                       }}
                     >
                       {ROUTINE_HABIT_LABELS[id]}
@@ -192,9 +180,10 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
                     {!done && (
                       <span
                         style={{
-                          color: 'var(--positive-100, #25ffa3)',
-                          fontSize: 11,
+                          color: 'var(--meow-brand)',
+                          fontSize: 12,
                           fontWeight: 800,
+                          fontFamily: 'var(--meow-body)',
                         }}
                       >
                         +{STANDARD_COIN_REWARD}
@@ -213,10 +202,17 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 8,
-                      padding: 12,
-                      background: 'var(--secondary-500, #42224d)',
-                      borderRadius: 8,
+                      gap: 10,
+                      padding: 16,
+                      background: done
+                        ? 'var(--meow-surface-muted)'
+                        : 'var(--meow-surface)',
+                      border: '2px solid #111',
+                      borderRadius: 18,
+                      boxShadow: done ? 'none' : '0 4px 0 #111',
+                      opacity: done ? 0.7 : 1,
+                      transform: done ? 'translateY(2px)' : 'none',
+                      transition: 'all 0.15s ease',
                     }}
                   >
                     <div
@@ -229,10 +225,10 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
                     >
                       <strong
                         style={{
-                          color: 'var(--primary-100, #ffd41a)',
-                          fontFamily: 'Inter, sans-serif',
+                          color: done ? 'var(--meow-text-muted)' : 'var(--meow-text)',
+                          fontFamily: 'var(--meow-body)',
                           fontWeight: 800,
-                          fontSize: 13,
+                          fontSize: 14,
                           flex: 1,
                         }}
                       >
@@ -240,9 +236,10 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
                       </strong>
                       <span
                         style={{
-                          color: 'var(--positive-100, #25ffa3)',
-                          fontSize: 11,
+                          color: done ? 'var(--meow-text-muted)' : 'var(--meow-brand)',
+                          fontSize: 13,
                           fontWeight: 800,
+                          fontFamily: 'var(--meow-body)',
                         }}
                       >
                         +{LARGE_COIN_REWARD}
@@ -250,8 +247,9 @@ export function HabitTrackerModal({ open, onClose }: HabitTrackerModalProps) {
                     </div>
                     <div
                       style={{
-                        color: 'var(--secondary-100, #d96eff)',
-                        fontSize: 11,
+                        color: 'var(--meow-text-soft)',
+                        fontFamily: 'var(--meow-body)',
+                        fontSize: 12,
                         lineHeight: 1.4,
                       }}
                     >

@@ -131,7 +131,7 @@ export function ChatPopup({ open, onClose }: ChatPopupProps) {
 
         <section className="meow-chat-hero">
           <AnimatedSprite frames={CHAT_FRAMES} alt="Meowchi ngobrol" className="meow-chat-animation" intervalMs={300} />
-          <h1>Apa yang mochi pengen obrolin sama Meowchi?</h1>
+          {history.length === 0 && <h1>Apa yang mochi pengen obrolin sama Meowchi?</h1>}
         </section>
 
         {/* Messages */}
