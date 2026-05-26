@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { getConfig, disableFeature, getFeatureError } from '../state/Config_Store';
 
-export const VISION_MODEL = 'gemini-2.0-flash';
+export const VISION_MODEL = 'gemini-2.5-flash';
 export const VISION_TIMEOUT_MS = 30_000;
 export const VISION_MAX_BYTES = 5 * 1024 * 1024;
 export const VISION_ACCEPTED_MIME = 'image/jpeg' as const;

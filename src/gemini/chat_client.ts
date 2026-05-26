@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getConfig, disableFeature, getFeatureError } from '../state/Config_Store';
 import type { CatState } from '../state/types';
 
-export const CHAT_MODEL = 'gemini-2.0-flash';
+export const CHAT_MODEL = 'gemini-2.5-flash';
 export const CHAT_TIMEOUT_MS = 30_000;
 export const CHAT_MAX_USER_CHARS = 500;
 
