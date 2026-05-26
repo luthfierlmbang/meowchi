@@ -51,6 +51,12 @@ export interface RoutineState {
   maxLocalDateSeen: string; // DD-MM-YYYY — for clock-skew backward protection
 }
 
+export interface ChatMessage {
+  role: 'user' | 'mochi';
+  text: string;
+  ts: number;
+}
+
 export interface PersistedState {
   pet: Pet;
   placed_items: PlacedItem[];
@@ -60,6 +66,7 @@ export interface PersistedState {
   routine_state: RoutineState;
   bgmVolume: number;
   sfxVolume: number;
+  chatHistory: ChatMessage[];
 }
 
 // Top-level localStorage shape
@@ -93,5 +100,6 @@ export function createDefaultPersistedState(): PersistedState {
     },
     bgmVolume: 0.5,
     sfxVolume: 0.5,
+    chatHistory: [],
   };
 }

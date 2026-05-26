@@ -1,6 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getConfig, disableFeature, getFeatureError } from '../state/Config_Store';
+import { useStore } from '../state/store';
 import type { CatState } from '../state/types';
+import type { ChatMessage } from '../state/types';
+export type { ChatMessage };
 
 export const CHAT_MODEL = 'gemini-2.5-flash';
 export const CHAT_TIMEOUT_MS = 30_000;
@@ -17,12 +20,6 @@ export interface ChatPayload {
   stats: ChatStatsSnapshot;
   currentState: CatState;
   userMessage: string;
-}
-
-export interface ChatMessage {
-  role: 'user' | 'mochi';
-  text: string;
-  ts: number; // ms epoch
 }
 
 export class ChatClientError extends Error {
@@ -45,7 +42,6 @@ export class ChatClientError extends Error {
   }
 }
 
-let _history: ChatMessage[] = [];
 let _inFlight: AbortController | null = null;
 let _genAi: GoogleGenerativeAI | null = null;
 
@@ -75,9 +71,10 @@ function buildSystemInstruction(payload: ChatPayload): string {
     }
   }
   return [
-    'Kamu adalah Mochi, seekor kucing abu-abu yang lucu dan menggemaskan.',
-    'Balas pesan pemain seolah-olah kamu adalah kucing yang sedang berbicara.',
-    'WAJIB: gunakan aksen kucing seperti meow, purr, hiss, mrrp dalam balasanmu.',
+    'Kamu adalah Mochi, seekor kucing abu-abu yang lucu, mandiri, dan penuh kepribadian.',
+    'Balas pesan pemain seolah-olah kamu adalah kucing asli yang bisa berbicara.',
+    'PENTING - SIFAT ALAMI KUCING: Tunjukkan sifat kucing yang kadang manja (ingin dielus, mendengkur "purr", minta makan) tapi di saat lain bisa sangat cuek, acuh tak acuh, semaunya sendiri, atau bahkan sedikit malas/sarkastik jika energinya sedang rendah.',
+    'WAJIB: gunakan aksen kucing seperti meow, purr, hiss, mrrp, rawr dalam balasanmu.',
     'WAJIB: balas maksimum 2 kalimat DAN maksimum 200 karakter.',
     'WAJIB: cerminkan kondisi fisikmu saat ini secara akurat berdasarkan stats di bawah.',
     '',
@@ -94,15 +91,7 @@ function buildSystemInstruction(payload: ChatPayload): string {
 
 /**
  * Send a user message to Gemini. Returns Mochi's reply (single string).
- *
- * Throws ChatClientError on:
- *  - feature_disabled: chat disabled (key missing or previously errored)
- *  - happiness_locked: Happiness === 0 (caller should pre-empt)
- *  - invalid_input: empty or oversized userMessage
- *  - in_flight: another request is pending
- *  - auth/quota: Gemini API rejected with auth/quota (also calls disableFeature)
- *  - timeout: 30 s without response (caller treats as failure)
- *  - network/malformed_response: any other failure
+ * Writes directly to the central Zustand store for persistent chat history.
  */
 export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
   // Pre-flight checks
@@ -120,7 +109,7 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
   }
 
   const userMsg: ChatMessage = { role: 'user', text: payload.userMessage, ts: Date.now() };
-  _history.push(userMsg);
+  useStore.getState().addChatMessage(userMsg);
 
   const systemInstruction = buildSystemInstruction(payload); // may throw instruction_build_failed
   const genAi = getGenAi();
@@ -131,9 +120,7 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
   const timeout = setTimeout(() => ac.abort(), CHAT_TIMEOUT_MS);
 
   try {
-    // Run generateContent against the user message; we don't pass full history
-    // because the System Instruction already encodes pet state and we keep
-    // history visual-only (per design: in-memory only, not replayed to API).
+    // Run generateContent against the user message
     const response = await Promise.race([
       model.generateContent(payload.userMessage),
       new Promise<never>((_resolve, reject) => {
@@ -147,7 +134,7 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
     }
 
     const mochiMsg: ChatMessage = { role: 'mochi', text: text.trim(), ts: Date.now() };
-    _history.push(mochiMsg);
+    useStore.getState().addChatMessage(mochiMsg);
     return mochiMsg;
   } catch (err) {
     console.error('[Gemini Chat Error]', err);
@@ -170,17 +157,17 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
 }
 
 /**
- * Get the in-memory chat history (read-only copy).
+ * Get the chat history from Zustand store.
  */
 export function getHistory(): readonly ChatMessage[] {
-  return _history.slice();
+  return useStore.getState().chatHistory;
 }
 
 /**
- * Clear chat history (called on popup close and on app reload).
+ * Clear chat history in Zustand store.
  */
 export function clearHistory(): void {
-  _history = [];
+  useStore.getState().clearChatHistory();
 }
 
 /**
@@ -194,10 +181,9 @@ export function cancelInFlight(): void {
 }
 
 /**
- * Test-only: reset the module to a clean state.
+ * Test-only: reset the genAi client reference.
  */
 export function _resetForTest(): void {
-  _history = [];
   _inFlight = null;
   _genAi = null;
 }

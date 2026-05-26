@@ -24,8 +24,9 @@ const persistedStateArb: fc.Arbitrary<PersistedState> = fc.record({
   coins: fc.integer({ min: 0, max: 100_000 }),
   habit_records: fc.constant([]),
   routine_state: fc.record({ maxLocalDateSeen: fc.string() }),
-  bgmVolume: fc.float({ min: 0, max: 1 }),
-  sfxVolume: fc.float({ min: 0, max: 1 }),
+  bgmVolume: fc.float({ min: 0, max: 1, noNaN: true }),
+  sfxVolume: fc.float({ min: 0, max: 1, noNaN: true }),
+  chatHistory: fc.constant([]),
 });
 
 describe('Property 10: Round-trip persistence (Zustand)', () => {

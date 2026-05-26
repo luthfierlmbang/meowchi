@@ -56,7 +56,6 @@ export function ChatPopup({ open, onClose }: ChatPopupProps) {
       const t = setTimeout(() => inputRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
-    clearHistory();
     cancelInFlight();
     setLoading(false);
     setInput('');

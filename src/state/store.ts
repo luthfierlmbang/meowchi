@@ -18,6 +18,7 @@ import {
 } from 'zustand/middleware';
 import type {
   CatState,
+  ChatMessage,
   HabitRecord,
   InventoryEntry,
   PersistedState,
@@ -246,6 +247,17 @@ function validatePersistedState(s: unknown): s is PersistedState {
   if (obj.bgmVolume !== undefined && (typeof obj.bgmVolume !== 'number' || !Number.isFinite(obj.bgmVolume))) return false;
   if (obj.sfxVolume !== undefined && (typeof obj.sfxVolume !== 'number' || !Number.isFinite(obj.sfxVolume))) return false;
 
+  // chatHistory (optional for backward compatibility)
+  if (obj.chatHistory !== undefined) {
+    if (!Array.isArray(obj.chatHistory)) return false;
+    for (const m of obj.chatHistory) {
+      if (!isObject(m)) return false;
+      if (m.role !== 'user' && m.role !== 'mochi') return false;
+      if (typeof m.text !== 'string') return false;
+      if (typeof m.ts !== 'number' || !Number.isFinite(m.ts)) return false;
+    }
+  }
+
   return true;
 }
 
@@ -281,6 +293,9 @@ export interface StoreActions {
 
   setBgmVolume: (vol: number) => void;
   setSfxVolume: (vol: number) => void;
+
+  addChatMessage: (msg: ChatMessage) => void;
+  clearChatHistory: () => void;
 
   /** Test-only helper to reset to default state. */
   _resetToDefaults: () => void;
@@ -415,6 +430,8 @@ export const useStore = create<Store>()(
       _resetToDefaults: () => set(() => createDefaultPersistedState()),
       setBgmVolume: (vol) => set(() => ({ bgmVolume: Math.max(0, Math.min(1, vol)) })),
       setSfxVolume: (vol) => set(() => ({ sfxVolume: Math.max(0, Math.min(1, vol)) })),
+      addChatMessage: (msg) => set((s) => ({ chatHistory: [...s.chatHistory, msg] })),
+      clearChatHistory: () => set(() => ({ chatHistory: [] })),
     }),
     {
       name: PERSIST_KEY,
@@ -430,6 +447,7 @@ export const useStore = create<Store>()(
         routine_state: s.routine_state,
         bgmVolume: s.bgmVolume,
         sfxVolume: s.sfxVolume,
+        chatHistory: s.chatHistory,
       }),
       // No in-place downgrade (Req 13.5): if persisted version > current, return
       // defaults so the next debounced write rewrites the envelope at version 1.
@@ -447,6 +465,7 @@ export const useStore = create<Store>()(
             routine_state: persisted.routine_state,
             bgmVolume: persisted.bgmVolume ?? 0.5,
             sfxVolume: persisted.sfxVolume ?? 0.5,
+            chatHistory: persisted.chatHistory ?? [],
           };
         }
         return createDefaultPersistedState();
@@ -467,6 +486,7 @@ export const useStore = create<Store>()(
           routine_state: persisted.routine_state,
           bgmVolume: persisted.bgmVolume ?? current.bgmVolume,
           sfxVolume: persisted.sfxVolume ?? current.sfxVolume,
+          chatHistory: persisted.chatHistory ?? current.chatHistory,
         };
       },
     },
