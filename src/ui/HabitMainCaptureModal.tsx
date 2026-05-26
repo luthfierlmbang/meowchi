@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GameButton, Spinner } from '../components/GameUI';
 import { MAIN_HABIT_LABELS, type MainHabitId } from '../features/habits/constants';
 import { submitMainHabit } from '../features/habits/habit_tracker';
-import { getConfig } from '../state/Config_Store';
+import { getConfig, getFeatureError } from '../state/Config_Store';
 import { showToast } from './Toast';
 
 export interface HabitMainCaptureModalProps {
@@ -327,7 +327,9 @@ export function HabitMainCaptureModal({ open, habitId, onClose }: HabitMainCaptu
               lineHeight: 1.5,
             }}
           >
-            Vision dinonaktifkan: API key Gemini belum dikonfigurasi
+            {getFeatureError('vision')
+              ? `Vision dinonaktifkan karena error API (${getFeatureError('vision')?.cause === 'auth' ? 'API Key tidak valid / Unauthorized' : 'Kuota terlampaui'})`
+              : 'Vision dinonaktifkan: API key Gemini belum dikonfigurasi'}
           </div>
         )}
 

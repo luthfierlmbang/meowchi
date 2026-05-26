@@ -75,6 +75,22 @@ describe('Mandatory Rule 14.2: setPointerCapture called BEFORE transition to car
         clientY: 400,
         pointerType: 'mouse',
       });
+      fireEvent.pointerUp(pet, {
+        pointerId: 1,
+        button: 0,
+        isPrimary: true,
+        clientX: 250,
+        clientY: 400,
+        pointerType: 'mouse',
+      });
+      fireEvent.pointerDown(pet, {
+        pointerId: 1,
+        button: 0,
+        isPrimary: true,
+        clientX: 250,
+        clientY: 400,
+        pointerType: 'mouse',
+      });
     });
 
     const capIdx = callOrder.indexOf('setPointerCapture');

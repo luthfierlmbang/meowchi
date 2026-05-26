@@ -5,6 +5,10 @@ export const ROUTINE_HABIT_IDS = [
   'routine.make_bed',
   'routine.stretch',
   'routine.tidy_room',
+  'routine.clean_dishes',
+  'routine.meditate',
+  'routine.read_book',
+  'routine.skincare',
 ] as const;
 
 export type RoutineHabitId = typeof ROUTINE_HABIT_IDS[number];
@@ -30,6 +34,10 @@ export const ROUTINE_HABIT_LABELS: Record<RoutineHabitId, string> = {
   'routine.make_bed': 'Rapikan Tempat Tidur',
   'routine.stretch': 'Peregangan',
   'routine.tidy_room': 'Bersihkan Kamar',
+  'routine.clean_dishes': 'Cuci Piring',
+  'routine.meditate': 'Meditasi',
+  'routine.read_book': 'Membaca Buku',
+  'routine.skincare': 'Perawatan Kulit (Skincare)',
 };
 
 export const MAIN_HABIT_LABELS: Record<MainHabitId, string> = {

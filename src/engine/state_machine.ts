@@ -67,8 +67,7 @@ export function transition(
       case 'forced_pooping':
         return { next: 'pooping', changed: true }; // Bladder=0 still forces pooping
       case 'pointer_down':
-        // Picking up a sleeping cat wakes it into carried (shows lift_sleepy frames)
-        return { next: 'carried', changed: true };
+        return { next: current, changed: false };
       default:
         return { next: current, changed: false };
     }

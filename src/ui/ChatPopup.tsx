@@ -10,7 +10,7 @@ import {
   sendMessage,
   type ChatMessage,
 } from '../gemini/chat_client';
-import { getConfig } from '../state/Config_Store';
+import { getConfig, getFeatureError } from '../state/Config_Store';
 import { useStore } from '../state/store';
 import { AnimatedSprite } from './AnimatedSprite';
 import { MeowchiButton, MeowchiTopNav } from './MeowchiUI';
@@ -74,7 +74,7 @@ export function ChatPopup({ open, onClose }: ChatPopupProps) {
 
   if (!open) return null;
 
-  const history: readonly ChatMessage[] = getHistory();
+  const history = useStore((s) => s.chatHistory);
   const trimmed = input.trim();
   const sendDisabled = loading || happinessLocked || chatDisabled || trimmed.length === 0;
   const inputDisabled = loading || happinessLocked || chatDisabled;
@@ -178,7 +178,9 @@ export function ChatPopup({ open, onClose }: ChatPopupProps) {
           </div>
         ) : chatDisabled ? (
           <div className="meow-chat-notice">
-            Fitur chat dinonaktifkan: API key Gemini belum dikonfigurasi.
+            {getFeatureError('chat')
+              ? `Fitur chat dinonaktifkan karena error API (${getFeatureError('chat')?.cause === 'auth' ? 'API Key tidak valid / Unauthorized' : 'Kuota terlampaui'}).`
+              : 'Fitur chat dinonaktifkan: API key Gemini belum dikonfigurasi.'}
           </div>
         ) : (
           <div className="meow-chat-input-row">

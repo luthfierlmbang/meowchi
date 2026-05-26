@@ -218,7 +218,18 @@ export function useDragController(
         }));
         const resolution = resolveDrop(catRect, placedForDrop);
         const targetType = resolution?.type ?? null;
-        state.setPetPosition(floorPositionFor(state.pet.position, room));
+        if (resolution) {
+          const item = resolution.item;
+          const itemW = ITEM_DIMS[item.type].width;
+          const itemH = ITEM_DIMS[item.type].height;
+          const alignedPos = {
+            x: item.x + (itemW - W_CAT) / 2,
+            y: item.y + itemH - H_CAT,
+          };
+          state.setPetPosition(alignedPos);
+        } else {
+          state.setPetPosition(floorPositionFor(state.pet.position, room));
+        }
         handlers.onDropResolved?.(targetType);
         handlers.onEvent?.({ kind: 'drop_resolved', targetType });
       }
