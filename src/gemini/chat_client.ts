@@ -108,9 +108,6 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
     throw new ChatClientError('Permintaan sebelumnya masih berjalan.', 'in_flight');
   }
 
-  const userMsg: ChatMessage = { role: 'user', text: payload.userMessage, ts: Date.now() };
-  useStore.getState().addChatMessage(userMsg);
-
   const systemInstruction = buildSystemInstruction(payload); // may throw instruction_build_failed
   const genAi = getGenAi();
   const model = genAi.getGenerativeModel({ model: CHAT_MODEL, systemInstruction });
@@ -133,7 +130,9 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
       throw new ChatClientError('Respons tidak valid dari Gemini.', 'malformed_response');
     }
 
+    const userMsg: ChatMessage = { role: 'user', text: payload.userMessage, ts: Date.now() };
     const mochiMsg: ChatMessage = { role: 'mochi', text: text.trim(), ts: Date.now() };
+    useStore.getState().addChatMessage(userMsg);
     useStore.getState().addChatMessage(mochiMsg);
     return mochiMsg;
   } catch (err) {

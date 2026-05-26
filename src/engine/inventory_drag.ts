@@ -74,9 +74,11 @@ export function tryPlaceInRoom(
   entryId: string,
   pos: { x: number; y: number },
   room: RoomBounds,
+  overrideEntry?: InventoryEntry,
 ): ValidationResult {
   const state = useStore.getState();
-  const entry = state.inventory.find((i) => i.id === entryId);
+  const storedEntry = state.inventory.find((i) => i.id === entryId);
+  const entry = overrideEntry ?? storedEntry;
   if (!entry) return { ok: false, reason: 'not_found' };
   const v = validatePlacement(entry, pos, state.placed_items, room);
   if (!v.ok) return v;

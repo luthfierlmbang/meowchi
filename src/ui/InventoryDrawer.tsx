@@ -1,6 +1,6 @@
 import { GameButton, GameIcon } from '../components/GameUI';
 import { ASSET_MAP } from '../assets/Asset_Map';
-import { ROOM } from '../engine/coords';
+import { ITEM_DIMS, ROOM } from '../engine/coords';
 import { LABELS } from '../features/shop/shop';
 import { removePlaced, tryPlaceInRoom } from '../features/shop/inventory';
 import { useStore } from '../state/store';
@@ -42,6 +42,16 @@ function currentRoomBounds() {
   };
 }
 
+function normalizeEntrySize(entry: InventoryEntry): InventoryEntry {
+  const size = ITEM_DIMS[entry.type];
+  return { ...entry, width: size.width, height: size.height };
+}
+
+function normalizePlacedSize(item: PlacedItem): PlacedItem {
+  const size = ITEM_DIMS[item.type];
+  return { ...item, width: size.width, height: size.height };
+}
+
 /**
  * Find a non-overlapping in-bounds floor slot for an inventory entry.
  * Sweeps the floor row left→right starting at x=32 in steps of width+16.
@@ -49,11 +59,12 @@ function currentRoomBounds() {
  */
 function findFreeFloorSlot(entry: InventoryEntry): { x: number; y: number } | null {
   const state = useStore.getState();
-  const placed = state.placed_items;
+  const normalizedEntry = normalizeEntrySize(entry);
+  const placed = state.placed_items.map(normalizePlacedSize);
   const room = currentRoomBounds();
-  const y = room.bottom - entry.height - 14;
-  for (let x = 24; x + entry.width <= room.right - 24; x += entry.width + 16) {
-    const candidate = { x, y, width: entry.width, height: entry.height };
+  const y = room.bottom - normalizedEntry.height - 14;
+  for (let x = 24; x + normalizedEntry.width <= room.right - 24; x += normalizedEntry.width + 16) {
+    const candidate = { x, y, width: normalizedEntry.width, height: normalizedEntry.height };
     const overlap = placed.some(
       (p) =>
         candidate.x < p.x + p.width &&
@@ -77,7 +88,7 @@ function InventoryRow({ entry }: InventoryRowProps) {
       showToast('Tidak ada ruang kosong di lantai.', 'warning');
       return;
     }
-    const result = tryPlaceInRoom(entry.id, slot, currentRoomBounds());
+    const result = tryPlaceInRoom(entry.id, slot, currentRoomBounds(), normalizeEntrySize(entry));
     if (result.ok) {
       showToast(`${LABELS[entry.type]} ditempatkan.`, 'info');
       return;

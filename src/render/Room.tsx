@@ -8,7 +8,7 @@ import {
 import {
   carriedBounds,
   catArenaBounds,
-  catRectAt,
+  catDropRectAt,
   clampPosition,
   H_CAT,
   ITEM_DIMS,
@@ -77,7 +77,7 @@ interface PlacedItemSpriteProps {
 function PlacedItemSprite({ item, currentState, catPosition, onDragStart }: PlacedItemSpriteProps) {
   const size = itemSizeFor(item.type);
   const itemRect = { x: item.x, y: item.y, width: size.width, height: size.height };
-  const activeUnderCat = aabb(catRectAt(catPosition), itemRect);
+  const activeUnderCat = aabb(catDropRectAt(catPosition), itemRect);
   const isBeingUsed =
     (item.type === 'toy' && currentState === 'eating' && activeUnderCat) ||
     (item.type === 'scratcher' && currentState === 'scratching' && activeUnderCat) ||

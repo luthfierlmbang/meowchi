@@ -222,10 +222,14 @@ export function useDragController(
           const item = resolution.item;
           const itemW = ITEM_DIMS[item.type].width;
           const itemH = ITEM_DIMS[item.type].height;
-          const alignedPos = {
-            x: item.x + (itemW - W_CAT) / 2,
-            y: item.y + itemH - H_CAT,
-          };
+          const alignedPos = clampPosition(
+            {
+              x: item.x + (itemW - W_CAT) / 2,
+              y: item.y + itemH - H_CAT,
+            },
+            carriedBounds(room),
+            { width: W_CAT, height: H_CAT },
+          );
           state.setPetPosition(alignedPos);
         } else {
           state.setPetPosition(floorPositionFor(state.pet.position, room));

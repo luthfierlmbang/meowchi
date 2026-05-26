@@ -105,8 +105,15 @@ export function setSleepPurring(enabled: boolean): void {
 
 export function unlockAmbientAudio(isSleeping: () => boolean): void {
   if (_audioUnlocked) return;
-  _audioUnlocked = true;
-  startBackgroundMusic();
+  _backgroundMusic = _backgroundMusic ?? getLoopingAudio(BACKGROUND_MUSIC, BGM_VOLUME * getBgmMultiplier());
+  _backgroundMusic.volume = BGM_VOLUME * getBgmMultiplier();
+  void _backgroundMusic.play()
+    .then(() => {
+      _audioUnlocked = true;
+    })
+    .catch(() => {
+      _audioUnlocked = false;
+    });
   setSleepPurring(isSleeping());
 }
 
