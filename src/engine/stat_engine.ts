@@ -11,6 +11,8 @@ export const ENERGY_RECHARGE_RATE = 20;
 // Extra Happiness decay rates per hour (Req 2.4, 2.6)
 export const HAPPINESS_LOW_RATE = 6;          // when any HEB ≤ 40 (Hunger > 0)
 export const HAPPINESS_HUNGER_ZERO_RATE = 30; // when Hunger = 0 (dominates, does NOT stack)
+export const HAPPINESS_NEGLECT_RATE = 4;      // after no chat/play for grace window
+export const HAPPINESS_NEGLECT_GRACE_HOURS = 3;
 
 // Boundary that triggers Happiness "low" extra decay
 export const STAT_THRESHOLD = 40;
@@ -57,6 +59,13 @@ function happinessExtraRate(stats: Stats): number {
   return 0;
 }
 
+function happinessRate(stats: Stats, socialIdleHours: number): number {
+  const healthRate = happinessExtraRate(stats);
+  const neglectRate =
+    socialIdleHours >= HAPPINESS_NEGLECT_GRACE_HOURS ? HAPPINESS_NEGLECT_RATE : 0;
+  return Math.max(healthRate, neglectRate);
+}
+
 /**
  * Apply linear decay over `deltaSeconds` using a SAMPLED set of conditions.
  * Used for the live tick (sample conditions before stepping).
@@ -72,6 +81,7 @@ export function applyDecay(
   hungerZero: boolean,
   anyLow40: boolean,
   isSleeping: boolean = false,
+  socialIdle: boolean = false,
 ): Stats {
   const hours = deltaSeconds / 3600;
   const hunger = clamp01(s.hunger - HUNGER_RATE * hours);
@@ -83,6 +93,8 @@ export function applyDecay(
   let extraPerHour = 0;
   if (hungerZero) extraPerHour = HAPPINESS_HUNGER_ZERO_RATE;
   else if (anyLow40) extraPerHour = HAPPINESS_LOW_RATE;
+
+  if (socialIdle) extraPerHour = Math.max(extraPerHour, HAPPINESS_NEGLECT_RATE);
 
   const happiness = clamp01(s.happiness - extraPerHour * hours);
   return { hunger, energy, bladder, happiness };
@@ -102,11 +114,17 @@ export function applyDecay(
  *
  * (Req 3.3)
  */
-export function projectPiecewise(s: Stats, hours: number, isSleeping: boolean = false): Stats {
+export function projectPiecewise(
+  s: Stats,
+  hours: number,
+  isSleeping: boolean = false,
+  socialIdleHoursAtStart: number = 0,
+): Stats {
   if (hours <= 0) return { ...s };
 
   let cur: Stats = { ...s };
   let remaining = hours;
+  let socialIdleHours = socialIdleHoursAtStart;
 
   // Bound the loop iteration count: each segment must end at a threshold
   // crossing, and there are a finite number of crossings (4 stats × 2 thresholds
@@ -114,7 +132,7 @@ export function projectPiecewise(s: Stats, hours: number, isSleeping: boolean = 
   const MAX_SEGMENTS = 16;
 
   for (let i = 0; i < MAX_SEGMENTS && remaining > 1e-9; i++) {
-    const extraRate = happinessExtraRate(cur);
+    const extraRate = happinessRate(cur, socialIdleHours);
 
     // Time to next relevant crossing (in hours), per stat:
     const crossings: number[] = [];
@@ -150,6 +168,9 @@ export function projectPiecewise(s: Stats, hours: number, isSleeping: boolean = 
       crossings.push((cur.bladder - STAT_THRESHOLD) / BLADDER_RATE);
     }
     if (cur.bladder > 0) crossings.push(cur.bladder / BLADDER_RATE);
+    if (socialIdleHours < HAPPINESS_NEGLECT_GRACE_HOURS) {
+      crossings.push(HAPPINESS_NEGLECT_GRACE_HOURS - socialIdleHours);
+    }
 
     let dt = remaining;
     for (const t of crossings) {
@@ -165,6 +186,7 @@ export function projectPiecewise(s: Stats, hours: number, isSleeping: boolean = 
       happiness: clamp01(cur.happiness - extraRate * dt),
     };
     remaining -= dt;
+    socialIdleHours += dt;
   }
 
   return cur;
@@ -207,7 +229,15 @@ export function applyOfflineCatchUp(
   const hoursPassed = dtMs / 3_600_000;
   const effectiveHours = Math.min(hoursPassed, OFFLINE_CAP_HOURS);
   const isSleeping = state.pet.currentState === 'sleeping';
-  const projected = projectPiecewise(state.pet.stats, effectiveHours, isSleeping);
+  const lastInteractionAt = state.pet.lastInteractionAt ?? state.pet.lastChecked;
+  const socialIdleHoursAtStart =
+    Math.max(0, state.pet.lastChecked - lastInteractionAt) / 3_600_000;
+  const projected = projectPiecewise(
+    state.pet.stats,
+    effectiveHours,
+    isSleeping,
+    socialIdleHoursAtStart,
+  );
 
   // Integer round + clamp (Req 3.4): sub-integer reload decays round to 0
   const rounded: Stats = {

@@ -134,6 +134,7 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
     const mochiMsg: ChatMessage = { role: 'mochi', text: text.trim(), ts: Date.now() };
     useStore.getState().addChatMessage(userMsg);
     useStore.getState().addChatMessage(mochiMsg);
+    useStore.getState().markSocialInteraction();
     return mochiMsg;
   } catch (err) {
     console.error('[Gemini Chat Error]', err);

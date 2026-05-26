@@ -64,6 +64,7 @@ export function scheduleScratching(handlers: TransientHandlers = {}): void {
     _activeTimers.delete('scratching');
     const state = useStore.getState();
     state.atomicApplyStatDelta({ happiness: +25 });
+    state.markSocialInteraction();
     handlers.onAnimationEnd?.({ kind: 'animation_end' });
   }, DURATION_SCRATCHING_MS);
   _activeTimers.set('scratching', t);

@@ -24,6 +24,7 @@ export interface Pet {
   currentState: CatState;
   position: { x: number; y: number };
   lastChecked: number; // ms epoch
+  lastInteractionAt: number; // ms epoch, reset by chat/play for Happiness decay
 }
 
 export type FurnitureType = 'scratcher' | 'toy' | 'litterbox';
@@ -90,6 +91,7 @@ export function createDefaultPersistedState(): PersistedState {
       currentState: 'idle',
       position: { x: 108, y: 380 }, // centered for 160px cat in 375px wide room, floor ~540
       lastChecked: Date.now(),
+      lastInteractionAt: Date.now(),
     },
     placed_items: [],
     inventory: [],

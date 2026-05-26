@@ -53,6 +53,7 @@ describe('Property 1: Stat clamping invariant', () => {
               currentState: 'idle' as const,
               position: { x: 0, y: 0 },
               lastChecked: now - offsetMs,
+              lastInteractionAt: now,
             },
           };
           const r = applyOfflineCatchUp(state, now);
@@ -113,6 +114,7 @@ describe('Property 3: Offline catch-up idempotence', () => {
               currentState: 'idle' as const,
               position: { x: 0, y: 0 },
               lastChecked: now - offsetMs,
+              lastInteractionAt: now,
             },
           };
           const r1 = applyOfflineCatchUp(state, now);
@@ -171,9 +173,29 @@ describe('Sleeping Energy Recharge Logic in stat_engine', () => {
         currentState: 'sleeping' as const,
         position: { x: 0, y: 0 },
         lastChecked: now - 3600000, // 1 hour ago
+        lastInteractionAt: now,
       },
     };
     const r = applyOfflineCatchUp(state, now);
     expect(r.newStats.energy).toBe(70); // 50 + 20
+  });
+
+  it('applyDecay decreases happiness after the social idle grace window', () => {
+    const initial: Stats = { hunger: 100, energy: 100, bladder: 100, happiness: 80 };
+    const out = applyDecay(initial, 3600, false, false, false, true);
+    expect(out.happiness).toBe(76);
+  });
+
+  it('projectPiecewise starts neglect decay only after 3 hours without chat or play', () => {
+    const initial: Stats = { hunger: 100, energy: 100, bladder: 100, happiness: 80 };
+    const out = projectPiecewise(initial, 4, false, 0);
+    expect(out.happiness).toBe(76);
+  });
+
+  it('sleeping still recharges energy while neglect can reduce happiness', () => {
+    const initial: Stats = { hunger: 100, energy: 50, bladder: 100, happiness: 80 };
+    const out = projectPiecewise(initial, 1, true, 3);
+    expect(out.energy).toBe(70);
+    expect(out.happiness).toBe(76);
   });
 });

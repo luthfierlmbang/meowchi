@@ -27,6 +27,29 @@ describe('Ticker Sleep/Wake logic', () => {
     expect(stats.bladder).toBeCloseTo(99.9167, 3);
   });
 
+  it('keeps recharging energy while happiness decays from social neglect during sleep', () => {
+    useStore.getState()._resetToDefaults();
+    useStore.setState((s) => ({
+      pet: {
+        ...s.pet,
+        currentState: 'sleeping',
+        stats: {
+          hunger: 100,
+          energy: 50,
+          bladder: 100,
+          happiness: 80,
+        },
+        lastInteractionAt: Date.now() - 4 * 3_600_000,
+      },
+    }));
+
+    runTickOnce();
+
+    const stats = useStore.getState().pet.stats;
+    expect(stats.energy).toBeCloseTo(50.333, 3);
+    expect(stats.happiness).toBeCloseTo(79.933, 3);
+  });
+
   it('keeps sleeping when energy reaches 100 during live tick', () => {
     useStore.getState()._resetToDefaults();
     useStore.getState().setPetState('sleeping');

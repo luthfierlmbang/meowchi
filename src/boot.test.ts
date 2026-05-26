@@ -31,6 +31,7 @@ describe('Boot sequence offline catch-up', () => {
         stats: { hunger: 100, energy: 80, bladder: 100, happiness: 100 },
         position: { x: 100, y: 100 },
         lastChecked: twoHoursAgo,
+        lastInteractionAt: Date.now(),
       }
     });
 
@@ -54,6 +55,7 @@ describe('Boot sequence offline catch-up', () => {
         stats: { hunger: 100, energy: 50, bladder: 100, happiness: 100 },
         position: { x: 100, y: 100 },
         lastChecked: oneHourAgo,
+        lastInteractionAt: Date.now(),
       }
     });
 

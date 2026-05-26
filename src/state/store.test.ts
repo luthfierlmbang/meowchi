@@ -18,6 +18,7 @@ const persistedStateArb: fc.Arbitrary<PersistedState> = fc.record({
     currentState: fc.constantFrom('idle' as const, 'sleeping' as const, 'walking_left' as const),
     position: fc.record({ x: fc.integer({ min: 0, max: 375 }), y: fc.integer({ min: 0, max: 500 }) }),
     lastChecked: fc.integer({ min: 0, max: Date.now() }),
+    lastInteractionAt: fc.integer({ min: 0, max: Date.now() }),
   }),
   placed_items: fc.constant([]),
   inventory: fc.constant([]),

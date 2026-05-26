@@ -228,6 +228,12 @@ function validatePersistedState(s: unknown): s is PersistedState {
   if (!isObject(pet.position)) return false;
   if (typeof pet.position.x !== 'number' || typeof pet.position.y !== 'number') return false;
   if (typeof pet.lastChecked !== 'number' || !Number.isFinite(pet.lastChecked)) return false;
+  if (
+    pet.lastInteractionAt !== undefined &&
+    (typeof pet.lastInteractionAt !== 'number' || !Number.isFinite(pet.lastInteractionAt))
+  ) {
+    return false;
+  }
 
   // collections
   if (!Array.isArray(s.placed_items) || !s.placed_items.every(validatePlacedItem)) return false;
@@ -272,6 +278,7 @@ export interface StoreActions {
   setPetStats: (stats: Stats) => void;
   setPetStatsAndLastChecked: (stats: Stats, lastChecked: number) => void;
   setLastChecked: (ts: number) => void;
+  markSocialInteraction: (ts?: number) => void;
 
   // Coin / shop / inventory
   addCoins: (delta: number) => void;
@@ -330,6 +337,9 @@ export const useStore = create<Store>()(
 
       setLastChecked: (ts) =>
         set((s) => ({ pet: { ...s.pet, lastChecked: ts } })),
+
+      markSocialInteraction: (ts = Date.now()) =>
+        set((s) => ({ pet: { ...s.pet, lastInteractionAt: ts } })),
 
       addCoins: (delta) =>
         set((s) => ({ coins: Math.max(0, s.coins + delta) })),
@@ -456,8 +466,12 @@ export const useStore = create<Store>()(
           return createDefaultPersistedState();
         }
         if (validatePersistedState(persisted)) {
+          const defaultPet = createDefaultPersistedState().pet;
           return {
-            pet: persisted.pet,
+            pet: {
+              ...persisted.pet,
+              lastInteractionAt: persisted.pet.lastInteractionAt ?? defaultPet.lastInteractionAt,
+            },
             placed_items: persisted.placed_items,
             inventory: persisted.inventory,
             coins: persisted.coins,
@@ -476,9 +490,13 @@ export const useStore = create<Store>()(
         if (!validatePersistedState(persisted)) {
           return current;
         }
+        const defaultPet = createDefaultPersistedState().pet;
         return {
           ...current,
-          pet: persisted.pet,
+          pet: {
+            ...persisted.pet,
+            lastInteractionAt: persisted.pet.lastInteractionAt ?? defaultPet.lastInteractionAt,
+          },
           placed_items: persisted.placed_items,
           inventory: persisted.inventory,
           coins: persisted.coins,
