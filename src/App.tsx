@@ -15,7 +15,7 @@ import {
   schedulePooping,
   scheduleScratching,
 } from './engine/transient_timers';
-import { playClick, playCatSound } from './engine/sound';
+import { playCatSound, setSleepPurring, unlockAmbientAudio } from './engine/sound';
 import type { DragControllerHandlers } from './engine/Drag_Controller';
 import { Room } from './render/Room';
 import { StatsHUD } from './ui/StatsHUD';
@@ -151,6 +151,28 @@ export default function App() {
       cancelAllTransientTimers();
     };
   }, [ready, dispatch, dispatchForced]);
+
+  useEffect(() => {
+    if (!ready) return;
+
+    const unlock = () => {
+      unlockAmbientAudio(() => useStore.getState().pet.currentState === 'sleeping');
+    };
+
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, [ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    setSleepPurring(currentState === 'sleeping');
+    return () => setSleepPurring(false);
+  }, [ready, currentState]);
 
   // Auto-sleep: check every minute whether the current hour is a sleep hour.
   // If so, and the cat is not already sleeping, force it to sleep.
