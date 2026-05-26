@@ -13,6 +13,8 @@ export const ROOM: Readonly<RoomBounds> = {
 // Cat sprite bounding box — enlarged to ~half the screen width
 export const W_CAT = 160;
 export const H_CAT = 160;
+export const DROP_HITBOX_W = 76;
+export const DROP_HITBOX_H = 76;
 export const FLOOR_TOP_RATIO = 0.58;
 export const FLOOR_BOTTOM_INSET = 14;
 
@@ -50,6 +52,24 @@ export function catArenaBounds(room: RoomBounds): RoomBounds {
   };
 }
 
+export function carriedBounds(room: RoomBounds): RoomBounds {
+  return {
+    left: room.left,
+    top: room.top,
+    right: room.right,
+    bottom: Math.max(room.top + H_CAT, room.bottom - FLOOR_BOTTOM_INSET),
+  };
+}
+
+export function floorPositionFor(pos: { x: number; y: number }, room: RoomBounds): { x: number; y: number } {
+  const arena = catArenaBounds(room);
+  return clampPosition(
+    { x: pos.x, y: arena.bottom - H_CAT },
+    arena,
+    { width: W_CAT, height: H_CAT },
+  );
+}
+
 /**
  * Center of a rect.
  */
@@ -71,4 +91,13 @@ export function euclid(a: { x: number; y: number }, b: { x: number; y: number })
  */
 export function catRectAt(pos: { x: number; y: number }): Rect {
   return { x: pos.x, y: pos.y, width: W_CAT, height: H_CAT };
+}
+
+export function catDropRectAt(pos: { x: number; y: number }): Rect {
+  return {
+    x: pos.x + (W_CAT - DROP_HITBOX_W) / 2,
+    y: pos.y + H_CAT * 0.48,
+    width: DROP_HITBOX_W,
+    height: DROP_HITBOX_H,
+  };
 }

@@ -20,9 +20,9 @@ export const PRICES: Record<FurnitureType, number> = {
 };
 
 export const DIMS: Record<FurnitureType, { width: number; height: number }> = {
-  scratcher: { width: 64, height: 64 },
-  toy: { width: 48, height: 48 },
-  litterbox: { width: 80, height: 64 },
+  scratcher: { width: 104, height: 104 },
+  toy: { width: 72, height: 72 },
+  litterbox: { width: 120, height: 96 },
 };
 
 export const LABELS: Record<FurnitureType, string> = {

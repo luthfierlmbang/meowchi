@@ -3,8 +3,10 @@ import { useStore } from '../state/store';
 import { resolveDrop, type Rect } from './aabb';
 import {
   catArenaBounds,
-  catRectAt,
+  carriedBounds,
+  catDropRectAt,
   clampPosition,
+  floorPositionFor,
   H_CAT,
   ROOM,
   W_CAT,
@@ -148,7 +150,7 @@ export function useDragController(
       const roomW = roomEl ? roomEl.clientWidth : ROOM.right;
       const roomH = roomEl ? roomEl.clientHeight : ROOM.bottom;
       const dynamicRoom = { left: 0, top: 0, right: roomW, bottom: roomH };
-      const arena = catArenaBounds(dynamicRoom);
+      const arena = carriedBounds(dynamicRoom);
 
       const newPos = clampPosition(
         { x: e.clientX - _pointerOffset.x, y: e.clientY - _pointerOffset.y },
@@ -200,9 +202,17 @@ export function useDragController(
         }
         _liftedOnPointerId = null;
         // Drop resolution
-        const catRect: Rect = catRectAt(state.pet.position);
+        const roomEl = wrapperRef.current;
+        const room = {
+          left: 0,
+          top: 0,
+          right: roomEl ? roomEl.clientWidth : ROOM.right,
+          bottom: roomEl ? roomEl.clientHeight : ROOM.bottom,
+        };
+        const catRect: Rect = catDropRectAt(state.pet.position);
         const resolution = resolveDrop(catRect, state.placed_items);
         const targetType = resolution?.type ?? null;
+        state.setPetPosition(floorPositionFor(state.pet.position, room));
         handlers.onDropResolved?.(targetType);
         handlers.onEvent?.({ kind: 'drop_resolved', targetType });
       }
