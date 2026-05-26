@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .pixel-img {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  /* Ensure select-none and touch-none are available even if Tailwind tree-shakes them */
+  .select-none { user-select: none; }
+  .touch-none { touch-action: none; }
+}
