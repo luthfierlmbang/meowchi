@@ -3,10 +3,10 @@
  *
  * Persistence behavior (design §11):
  * - Top-level on-disk shape (managed by Zustand persist + partialize):
- *     { state: { pet, placed_items, inventory, coins, habit_records, routine_state }, version: 1 }
+ *     { state: { pet, placed_items, inventory, coins, habit_records, routine_state }, version: 2 }
  * - Debounced writes (500 ms) with sync flush on `pagehide` / `beforeunload`.
  * - Validate-before-hydrate (parse + schema + version checks); failure → defaults.
- * - No in-place downgrade: persisted version > 1 → load defaults, rewrite on next save.
+ * - Version mismatch resets to defaults so stale local saves can be cleared.
  * - Atomic write with in-memory fallback Map on QuotaExceededError or any write throw;
  *   non-blocking toast event emitted via `window.dispatchEvent`.
  */
@@ -33,7 +33,7 @@ import { createDefaultPersistedState } from './types';
 // ----------------------------------------------------------------------------
 
 export const PERSIST_KEY = 'mochi_v1_store';
-export const PERSIST_VERSION = 1 as const;
+export const PERSIST_VERSION = 2 as const;
 const WRITE_DEBOUNCE_MS = 500;
 
 /** Event name for non-blocking toast notifications about storage failures. */
@@ -459,10 +459,10 @@ export const useStore = create<Store>()(
         sfxVolume: s.sfxVolume,
         chatHistory: s.chatHistory,
       }),
-      // No in-place downgrade (Req 13.5): if persisted version > current, return
-      // defaults so the next debounced write rewrites the envelope at version 1.
+      // Reset stale or future save data on version mismatch. This intentionally
+      // clears old local stats/items/chats after a reset release.
       migrate: (persisted, version) => {
-        if (version > PERSIST_VERSION) {
+        if (version !== PERSIST_VERSION) {
           return createDefaultPersistedState();
         }
         if (validatePersistedState(persisted)) {

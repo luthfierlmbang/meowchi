@@ -4,6 +4,7 @@ import type { PersistedState } from './types';
 import { createDefaultPersistedState } from './types';
 
 const PERSIST_KEY = 'mochi_v1_store';
+const PERSIST_VERSION = 2;
 
 const statsArb = fc.record({
   hunger: fc.float({ min: 0, max: 100, noNaN: true }),
@@ -34,10 +35,10 @@ describe('Property 10: Round-trip persistence (Zustand)', () => {
   it('serialize → write → read → deserialize ≡ original state (structural)', () => {
     fc.assert(
       fc.property(persistedStateArb, (state) => {
-        const envelope = { state, version: 1 };
+        const envelope = { state, version: PERSIST_VERSION };
         const json = JSON.stringify(envelope);
         const parsed = JSON.parse(json) as { state: PersistedState; version: number };
-        expect(parsed.version).toBe(1);
+        expect(parsed.version).toBe(PERSIST_VERSION);
         expect(parsed.state).toEqual(state);
       }),
       { numRuns: 200 },
@@ -58,14 +59,14 @@ describe('Property 11: Persistence write atomicity', () => {
       fc.property(fc.array(persistedStateArb, { minLength: 1, maxLength: 10 }), (states) => {
         for (const s of states) {
           // Single setItem with a single JSON.stringify is atomic at the localStorage layer.
-          localStorage.setItem(PERSIST_KEY, JSON.stringify({ state: s, version: 1 }));
+          localStorage.setItem(PERSIST_KEY, JSON.stringify({ state: s, version: PERSIST_VERSION }));
         }
         const raw = localStorage.getItem(PERSIST_KEY);
         if (raw === null) return;
         const parsed = JSON.parse(raw) as { state: PersistedState; version: number };
-        // Top-level shape is always { state, version: 1 }
+        // Top-level shape is always { state, version: PERSIST_VERSION }
         expect(parsed).toHaveProperty('state');
-        expect(parsed.version).toBe(1);
+        expect(parsed.version).toBe(PERSIST_VERSION);
       }),
       { numRuns: 100 },
     );

@@ -73,7 +73,7 @@ export interface PersistedState {
 // Top-level localStorage shape
 export interface PersistEnvelope {
   state: PersistedState;
-  version: 1;
+  version: 2;
 }
 
 // IndexedDB photo entry
