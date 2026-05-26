@@ -8,6 +8,7 @@ import {
   clampPosition,
   floorPositionFor,
   H_CAT,
+  ITEM_DIMS,
   ROOM,
   W_CAT,
 } from './coords';
@@ -210,7 +211,12 @@ export function useDragController(
           bottom: roomEl ? roomEl.clientHeight : ROOM.bottom,
         };
         const catRect: Rect = catDropRectAt(state.pet.position);
-        const resolution = resolveDrop(catRect, state.placed_items);
+        const placedForDrop = state.placed_items.map((item) => ({
+          ...item,
+          width: ITEM_DIMS[item.type].width,
+          height: ITEM_DIMS[item.type].height,
+        }));
+        const resolution = resolveDrop(catRect, placedForDrop);
         const targetType = resolution?.type ?? null;
         state.setPetPosition(floorPositionFor(state.pet.position, room));
         handlers.onDropResolved?.(targetType);

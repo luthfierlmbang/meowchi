@@ -5,7 +5,16 @@ import {
   ASSET_MAP,
   getRoomBackgroundForHour,
 } from '../assets/Asset_Map';
-import { catArenaBounds, catRectAt, clampPosition, H_CAT, ROOM, W_CAT } from '../engine/coords';
+import {
+  carriedBounds,
+  catArenaBounds,
+  catRectAt,
+  clampPosition,
+  H_CAT,
+  ITEM_DIMS,
+  ROOM,
+  W_CAT,
+} from '../engine/coords';
 import { useDragController, type DragControllerHandlers } from '../engine/Drag_Controller';
 import { aabb, isInsideRoom, overlapsAny } from '../engine/aabb';
 import type { PlacedItem, InventoryEntry, FurnitureType } from '../state/types';
@@ -54,6 +63,10 @@ function spriteUrlFor(type: FurnitureType, catIsPooping: boolean): string {
   return catIsPooping ? ASSET_MAP.items.litterbox_used : ASSET_MAP.items.litterbox_clean;
 }
 
+function itemSizeFor(type: FurnitureType): { width: number; height: number } {
+  return ITEM_DIMS[type];
+}
+
 interface PlacedItemSpriteProps {
   item: PlacedItem;
   currentState: string;
@@ -62,7 +75,8 @@ interface PlacedItemSpriteProps {
 }
 
 function PlacedItemSprite({ item, currentState, catPosition, onDragStart }: PlacedItemSpriteProps) {
-  const itemRect = { x: item.x, y: item.y, width: item.width, height: item.height };
+  const size = itemSizeFor(item.type);
+  const itemRect = { x: item.x, y: item.y, width: size.width, height: size.height };
   const activeUnderCat = aabb(catRectAt(catPosition), itemRect);
   const isBeingUsed =
     (item.type === 'toy' && currentState === 'eating' && activeUnderCat) ||
@@ -82,8 +96,8 @@ function PlacedItemSprite({ item, currentState, catPosition, onDragStart }: Plac
         position: 'absolute',
         left: item.x,
         top: item.y,
-        width: item.width,
-        height: item.height,
+        width: size.width,
+        height: size.height,
         userSelect: 'none',
         cursor: 'grab',
         touchAction: 'none',
@@ -146,12 +160,13 @@ export function Room({ dragHandlers }: RoomProps) {
   });
 
   useEffect(() => {
-    const arena = catArenaBounds(roomBoundsFor(wrapperRef.current));
+    const room = roomBoundsFor(wrapperRef.current);
+    const arena = currentState === 'carried' ? carriedBounds(room) : catArenaBounds(room);
     const clamped = clampPosition(position, arena, { width: W_CAT, height: H_CAT });
     if (clamped.x !== position.x || clamped.y !== position.y) {
       useStore.getState().setPetPosition(clamped);
     }
-  }, [position.x, position.y]);
+  }, [currentState, position.x, position.y]);
 
   // ── Drag ghost state ──────────────────────────────────────────────────────
   const [ghost, setGhost] = useState<DragGhost | null>(null);
@@ -178,6 +193,7 @@ export function Room({ dragHandlers }: RoomProps) {
     (itemId: string, e: React.PointerEvent) => {
       const item = placed_items.find((p) => p.id === itemId);
       if (!item) return;
+      const size = itemSizeFor(item.type);
       const roomEl = wrapperRef.current;
       if (!roomEl) return;
       const rect = roomEl.getBoundingClientRect();
@@ -186,7 +202,7 @@ export function Room({ dragHandlers }: RoomProps) {
       const g: DragGhost = {
         kind: 'placed',
         id: itemId,
-        entry: item,
+        entry: { ...item, width: size.width, height: size.height },
         x: item.x,
         y: item.y,
         offsetX,

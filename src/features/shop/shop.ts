@@ -11,6 +11,7 @@
  * - Inventory ids are unique across `inventory ∪ placed_items` (Req 11.7).
  */
 import { useStore } from '../../state/store';
+import { ITEM_DIMS } from '../../engine/coords';
 import type { FurnitureType, InventoryEntry } from '../../state/types';
 
 export const PRICES: Record<FurnitureType, number> = {
@@ -19,11 +20,7 @@ export const PRICES: Record<FurnitureType, number> = {
   litterbox: 80,
 };
 
-export const DIMS: Record<FurnitureType, { width: number; height: number }> = {
-  scratcher: { width: 104, height: 104 },
-  toy: { width: 72, height: 72 },
-  litterbox: { width: 120, height: 96 },
-};
+export const DIMS: Record<FurnitureType, { width: number; height: number }> = ITEM_DIMS;
 
 export const LABELS: Record<FurnitureType, string> = {
   scratcher: 'Cat Scratcher',

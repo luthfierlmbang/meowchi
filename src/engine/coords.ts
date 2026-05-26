@@ -1,4 +1,5 @@
 import type { RoomBounds, Rect } from './aabb';
+import type { FurnitureType } from '../state/types';
 
 // Logical room bounds — used as fallback when actual DOM size is unavailable.
 // The Room component now fills the viewport, so runtime code should use
@@ -13,10 +14,15 @@ export const ROOM: Readonly<RoomBounds> = {
 // Cat sprite bounding box — enlarged to ~half the screen width
 export const W_CAT = 160;
 export const H_CAT = 160;
-export const DROP_HITBOX_W = 76;
-export const DROP_HITBOX_H = 76;
+export const DROP_HITBOX_W = 34;
+export const DROP_HITBOX_H = 34;
 export const FLOOR_TOP_RATIO = 0.58;
 export const FLOOR_BOTTOM_INSET = 14;
+export const ITEM_DIMS: Record<FurnitureType, { width: number; height: number }> = {
+  scratcher: { width: 136, height: 136 },
+  toy: { width: 92, height: 92 },
+  litterbox: { width: 150, height: 116 },
+};
 
 // Floor baseline — sprite's bottom-left edge sits on Y_floor when on the floor
 export const Y_FLOOR = ROOM.bottom;
@@ -96,7 +102,7 @@ export function catRectAt(pos: { x: number; y: number }): Rect {
 export function catDropRectAt(pos: { x: number; y: number }): Rect {
   return {
     x: pos.x + (W_CAT - DROP_HITBOX_W) / 2,
-    y: pos.y + H_CAT * 0.48,
+    y: pos.y + H_CAT * 0.68,
     width: DROP_HITBOX_W,
     height: DROP_HITBOX_H,
   };
