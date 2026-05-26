@@ -94,6 +94,9 @@ export function transition(
     if (event.kind === 'animation_end') {
       return { next: 'idle', changed: true };
     }
+    if ((current === 'clicked_left' || current === 'clicked_right') && event.kind === 'pointer_down') {
+      return { next: 'carried', changed: true };
+    }
     if (event.kind === 'pointer_down' || event.kind === 'poke' || event.kind === 'drop_resolved' || event.kind === 'pointer_cancel') {
       return { next: current, changed: false };
     }

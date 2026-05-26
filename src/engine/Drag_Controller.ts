@@ -28,6 +28,8 @@ let _pointerOffset: { x: number; y: number } | null = null;
 let _hasMoved = false;
 let _lastTapTime = 0;
 let _lastTapPos: { x: number; y: number } | null = null;
+let _singleTapTimer: ReturnType<typeof setTimeout> | null = null;
+let _liftedOnPointerId: number | null = null;
 // Track which direction the cat is facing for poke animation
 let _facingLeft = false;
 
@@ -35,6 +37,13 @@ function applySelectNone(el: HTMLElement | null): () => void {
   if (!el) return () => {};
   el.classList.add('select-none');
   return () => el.classList.remove('select-none');
+}
+
+function clearSingleTapTimer(): void {
+  if (_singleTapTimer !== null) {
+    clearTimeout(_singleTapTimer);
+    _singleTapTimer = null;
+  }
 }
 
 export function useDragController(
@@ -87,6 +96,14 @@ export function useDragController(
       if (_activePointerId !== null) return;
       if (e.pointerType === 'touch') e.preventDefault();
 
+      const tapPos = { x: e.clientX, y: e.clientY };
+      const now = Date.now();
+      const isDoubleTap =
+        cs !== 'carried' &&
+        _lastTapPos !== null &&
+        now - _lastTapTime <= DOUBLE_TAP_MS &&
+        Math.hypot(tapPos.x - _lastTapPos.x, tapPos.y - _lastTapPos.y) <= DOUBLE_TAP_DISTANCE;
+
       _pointerOffset = {
         x: e.clientX - state.pet.position.x,
         y: e.clientY - state.pet.position.y,
@@ -97,9 +114,19 @@ export function useDragController(
       const target = e.currentTarget as HTMLElement & { setPointerCapture?: (id: number) => void };
       try { target.setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
 
+      if (isDoubleTap) {
+        clearSingleTapTimer();
+        _lastTapTime = 0;
+        _lastTapPos = null;
+        _liftedOnPointerId = e.pointerId;
+        handlers.onCarryStart?.();
+        handlers.onEvent?.({ kind: 'pointer_down' });
+        return;
+      }
+
       // Don't dispatch yet: single tap pokes, double tap lifts.
     },
-    [],
+    [handlers],
   );
 
   const handlePointerMove = useCallback(
@@ -152,27 +179,26 @@ export function useDragController(
       if (cs !== 'carried') {
         if (movedFar) return;
 
-        const isDoubleTap =
-          _lastTapPos !== null &&
-          now - _lastTapTime <= DOUBLE_TAP_MS &&
-          Math.hypot(tapPos.x - _lastTapPos.x, tapPos.y - _lastTapPos.y) <= DOUBLE_TAP_DISTANCE;
-
         _lastTapTime = now;
         _lastTapPos = tapPos;
 
-        if (isDoubleTap) {
-          _lastTapTime = 0;
-          _lastTapPos = null;
-          handlers.onCarryStart?.();
-          handlers.onEvent?.({ kind: 'pointer_down' });
-          return;
-        }
-
-        handlers.onPoke?.(_facingLeft);
+        clearSingleTapTimer();
+        _singleTapTimer = setTimeout(() => {
+          _singleTapTimer = null;
+          const latest = useStore.getState().pet.currentState;
+          if (latest === 'idle' || latest === 'walking_left' || latest === 'walking_right') {
+            handlers.onPoke?.(_facingLeft);
+          }
+        }, DOUBLE_TAP_MS);
         return;
       }
 
       if (cs === 'carried') {
+        if (_liftedOnPointerId === e.pointerId && !movedFar) {
+          _liftedOnPointerId = null;
+          return;
+        }
+        _liftedOnPointerId = null;
         // Drop resolution
         const catRect: Rect = catRectAt(state.pet.position);
         const resolution = resolveDrop(catRect, state.placed_items);
@@ -189,6 +215,8 @@ export function useDragController(
       if (e.pointerId !== _activePointerId) return;
       _activePointerId = null;
       _pointerOffset = null;
+      _liftedOnPointerId = null;
+      clearSingleTapTimer();
       handlers.onPointerCancel?.();
       handlers.onEvent?.({ kind: 'pointer_cancel' });
     },
@@ -200,6 +228,8 @@ export function useDragController(
       if (e.pointerId !== _activePointerId) return;
       _activePointerId = null;
       _pointerOffset = null;
+      _liftedOnPointerId = null;
+      clearSingleTapTimer();
       handlers.onPointerCancel?.();
       handlers.onEvent?.({ kind: 'pointer_cancel' });
     },
@@ -227,6 +257,8 @@ export function _resetForTest(): void {
   _pointerOffset = null;
   _lastTapTime = 0;
   _lastTapPos = null;
+  _liftedOnPointerId = null;
+  clearSingleTapTimer();
 }
 
 export function _getActivePointerIdForTest(): number | null {
