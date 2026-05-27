@@ -36,6 +36,7 @@ export const ALL_CAT_STATES: readonly CatState[] = [
   'eating',
   'pooping',
   'sleeping',
+  'focusing',
   'clicked_left',
   'clicked_right',
 ] as const;
@@ -71,6 +72,13 @@ export function transition(
       default:
         return { next: current, changed: false };
     }
+  }
+
+  if (current === 'focusing') {
+    if (event.kind === 'forced_sleeping') return { next: 'sleeping', changed: true };
+    if (event.kind === 'forced_pooping') return { next: 'pooping', changed: true };
+    if (event.kind === 'animation_end') return { next: 'idle', changed: true };
+    return { next: current, changed: false };
   }
 
   // Forced events take precedence regardless of current state (except sleeping handled above)

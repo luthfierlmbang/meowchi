@@ -8,6 +8,7 @@ export interface MoreSheetProps {
   onChat: () => void;
   onAlbum: () => void;
   onInventory: () => void;
+  onFocus: () => void;
   onSettings: () => void;
   onLogout: () => void;
   isSleeping: boolean;
@@ -47,6 +48,7 @@ export function MoreSheet({
   onChat,
   onAlbum,
   onInventory,
+  onFocus,
   onSettings,
   onLogout,
   isSleeping,
@@ -80,6 +82,12 @@ export function MoreSheet({
           label="Chat dengan Mochi"
           sublabel="Ngobrol bareng Mochi"
           onClick={() => { onChat(); onClose(); }}
+        />
+        <SheetBtn
+          icon="trophy"
+          label="Mulai Fokus"
+          sublabel="Timer produktif bareng Mochi"
+          onClick={() => { onFocus(); onClose(); }}
         />
         <SheetBtn
           icon="heart"

@@ -198,4 +198,22 @@ describe('Sleeping Energy Recharge Logic in stat_engine', () => {
     expect(out.energy).toBe(70);
     expect(out.happiness).toBe(76);
   });
+
+  it('applyOfflineCatchUp freezes bladder and happiness while focusing', () => {
+    const now = 1700000000000;
+    const state = {
+      pet: {
+        stats: { hunger: 80, energy: 50, bladder: 60, happiness: 70 },
+        currentState: 'focusing' as const,
+        position: { x: 0, y: 0 },
+        lastChecked: now - 3600000,
+        lastInteractionAt: now - 3600000,
+      },
+    };
+    const r = applyOfflineCatchUp(state, now);
+    expect(r.newStats.hunger).toBe(74);
+    expect(r.newStats.energy).toBe(46);
+    expect(r.newStats.bladder).toBe(60);
+    expect(r.newStats.happiness).toBe(70);
+  });
 });

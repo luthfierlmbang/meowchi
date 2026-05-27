@@ -16,6 +16,7 @@ const eat = [1, 2, 3, 4].map((i) => `/assets/Eat/Eat-${i} 1.png`);
 const pup = [1, 2, 3].map((i) => `/assets/Pup/Pasir-kucing${i} 1.png`);
 const sleep = [1, 2, 3, 4, 5].map((i) => `/assets/Sleep/Sleep-${i} 1.png`);
 const toy_action = [1, 2, 3, 4].map((i) => `/assets/toy-action/toy-fish${i}.png`);
+const focus = [`/assets/Walking-Right/Walking-right1 1.png`, `/assets/Walking-Right/Walking-right2 1.png`];
 const clicked_left = [`/assets/Clicked-Left/when-clicked-left 1.png`];
 const clicked_right = [`/assets/Clicked-Right/when-clicked-right 1.png`];
 
@@ -29,6 +30,7 @@ export interface AssetMap {
   eating: FrameUrl[];
   pooping: FrameUrl[];
   sleeping: FrameUrl[];
+  focusing: FrameUrl[];
   clicked_left: FrameUrl[];
   clicked_right: FrameUrl[];
   toy_action: FrameUrl[];
@@ -56,6 +58,7 @@ export const ASSET_MAP: AssetMap = {
   eating: eat,
   pooping: pup,
   sleeping: sleep,
+  focusing: focus,
   clicked_left,
   clicked_right,
   toy_action,
@@ -86,6 +89,7 @@ export function getAllFrameUrls(map: AssetMap = ASSET_MAP): FrameUrl[] {
   map.eating.forEach((u) => urls.add(u));
   map.pooping.forEach((u) => urls.add(u));
   map.sleeping.forEach((u) => urls.add(u));
+  map.focusing.forEach((u) => urls.add(u));
   map.toy_action.forEach((u) => urls.add(u));
   urls.add(map.items.scratcher);
   urls.add(map.items.toy);
@@ -140,6 +144,8 @@ export function getFramesForState(state: CatState, map: AssetMap = ASSET_MAP): F
       return map.pooping;
     case 'sleeping':
       return map.sleeping;
+    case 'focusing':
+      return map.focusing;
     case 'clicked_left':
       return map.clicked_left;
     case 'clicked_right':
@@ -151,5 +157,7 @@ export function getFramesForState(state: CatState, map: AssetMap = ASSET_MAP): F
  * Get the frame duration for a given state.
  */
 export function getFrameDurationForState(state: CatState): number {
-  return state === 'sleeping' ? FRAME_DURATION_MS_SLEEP : FRAME_DURATION_MS_ACTIVE;
+  if (state === 'sleeping') return FRAME_DURATION_MS_SLEEP;
+  if (state === 'focusing') return 400;
+  return FRAME_DURATION_MS_ACTIVE;
 }

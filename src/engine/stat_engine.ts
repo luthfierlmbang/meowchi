@@ -100,6 +100,15 @@ export function applyDecay(
   return { hunger, energy, bladder, happiness };
 }
 
+export function applyFocusDecay(s: Stats, deltaSeconds: number): Stats {
+  const hours = deltaSeconds / 3600;
+  return {
+    ...s,
+    hunger: clamp01(s.hunger - HUNGER_RATE * hours),
+    energy: clamp01(s.energy - ENERGY_RATE * hours),
+  };
+}
+
 /**
  * Project stats forward by `hours` using piecewise linear integration.
  *
@@ -228,6 +237,19 @@ export function applyOfflineCatchUp(
 
   const hoursPassed = dtMs / 3_600_000;
   const effectiveHours = Math.min(hoursPassed, OFFLINE_CAP_HOURS);
+  if (state.pet.currentState === 'focusing') {
+    const focused = applyFocusDecay(state.pet.stats, effectiveHours * 3600);
+    return {
+      newStats: {
+        hunger: clamp01(Math.round(focused.hunger)),
+        energy: clamp01(Math.round(focused.energy)),
+        bladder: clamp01(Math.round(focused.bladder)),
+        happiness: clamp01(Math.round(focused.happiness)),
+      },
+      newLastChecked: now,
+      hoursApplied: effectiveHours,
+    };
+  }
   const isSleeping = state.pet.currentState === 'sleeping';
   const lastInteractionAt = state.pet.lastInteractionAt ?? state.pet.lastChecked;
   const socialIdleHoursAtStart =

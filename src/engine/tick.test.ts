@@ -85,4 +85,28 @@ describe('Ticker Sleep/Wake logic', () => {
     // Energy rate: -4/h -> -0.0667 per tick
     expect(stats.energy).toBeCloseTo(49.933, 3);
   });
+
+  it('only decays hunger and energy while focusing', () => {
+    useStore.getState()._resetToDefaults();
+    useStore.setState((s) => ({
+      pet: {
+        ...s.pet,
+        currentState: 'focusing',
+        stats: {
+          hunger: 80,
+          energy: 50,
+          bladder: 60,
+          happiness: 70,
+        },
+      },
+    }));
+
+    runTickOnce();
+
+    const stats = useStore.getState().pet.stats;
+    expect(stats.hunger).toBeCloseTo(79.9, 3);
+    expect(stats.energy).toBeCloseTo(49.933, 3);
+    expect(stats.bladder).toBe(60);
+    expect(stats.happiness).toBe(70);
+  });
 });

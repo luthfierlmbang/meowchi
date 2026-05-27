@@ -25,6 +25,7 @@ import { Toast, showToast } from './ui/Toast';
 import { ChatPopup } from './ui/ChatPopup';
 import { ShopModal } from './ui/ShopModal';
 import { InventoryDrawer } from './ui/InventoryDrawer';
+import { FocusTimerModal } from './ui/FocusTimerModal';
 import { PhotoAlbumModal } from './ui/PhotoAlbumModal';
 import { HabitTrackerModal } from './ui/HabitTrackerModal';
 import { SettingsModal } from './ui/SettingsModal';
@@ -66,10 +67,12 @@ export default function App() {
   const [albumOpen, setAlbumOpen] = useState(false);
   const [habitOpen, setHabitOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [focusOpen, setFocusOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const currentState = useStore((s) => s.pet.currentState);
+  const focusSession = useStore((s) => s.focusSession);
   const ready = bootStage === 'ready';
 
   // Run boot once on mount.
@@ -124,6 +127,20 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!ready || focusSession?.status !== 'running') return undefined;
+    const completeIfDone = () => {
+      const session = useStore.getState().focusSession;
+      if (session?.status === 'running' && Date.now() >= session.endsAt) {
+        useStore.getState().completeFocusSession();
+        setFocusOpen(true);
+      }
+    };
+    completeIfDone();
+    const id = setInterval(completeIfDone, 500);
+    return () => clearInterval(id);
+  }, [ready, focusSession?.id, focusSession?.status]);
+
   /**
    * Forced events from the tick (Bladder=0, Energy=0) interrupt any pending
    * transient timer (eating/scratching/pooping) before the new state takes
@@ -134,6 +151,7 @@ export default function App() {
     (event: StateEvent) => {
       if (event.kind === 'forced_pooping' || event.kind === 'forced_sleeping') {
         cancelAllTransientTimers();
+        useStore.getState().clearFocusSession();
       }
       dispatch(event);
     },
@@ -185,6 +203,7 @@ export default function App() {
       const state = useStore.getState();
       const cs = state.pet.currentState;
       if (isSleepHour(hour) && cs !== 'sleeping' && state.pet.stats.energy < 100) {
+        if (cs === 'focusing') return;
         cancelAllTransientTimers();
         dispatch({ kind: 'sleep_button' });
       } else if (!isSleepHour(hour) && cs === 'sleeping') {
@@ -203,6 +222,10 @@ export default function App() {
     const cs = state.pet.currentState;
     if (cs === 'sleeping') {
       showToast('Mochi sedang tidur!', 'info');
+      return;
+    }
+    if (cs === 'focusing') {
+      showToast('Mochi sedang fokus!', 'info');
       return;
     }
     if (cs === 'eating') {
@@ -240,6 +263,7 @@ export default function App() {
     setAlbumOpen(false);
     setHabitOpen(false);
     setInventoryOpen(false);
+    setFocusOpen(false);
     setIntroStartStep('login');
     setIntroDone(false);
   }, []);
@@ -299,6 +323,7 @@ export default function App() {
         onChat={() => setChatOpen(true)}
         onAlbum={() => setAlbumOpen(true)}
         onInventory={() => setInventoryOpen(true)}
+        onFocus={() => setFocusOpen(true)}
         onSettings={() => setSettingsOpen(true)}
         onLogout={handleLogout}
       />
@@ -309,6 +334,7 @@ export default function App() {
       <PhotoAlbumModal open={albumOpen} onClose={() => setAlbumOpen(false)} />
       <HabitTrackerModal open={habitOpen} onClose={() => setHabitOpen(false)} />
       <InventoryDrawer open={inventoryOpen} onClose={() => setInventoryOpen(false)} />
+      <FocusTimerModal open={focusOpen} onClose={() => setFocusOpen(false)} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {/* Toast layer */}

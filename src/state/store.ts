@@ -19,6 +19,8 @@ import {
 import type {
   CatState,
   ChatMessage,
+  FocusActivity,
+  FocusSession,
   HabitRecord,
   InventoryEntry,
   PersistedState,
@@ -217,6 +219,28 @@ function validateHabitRecord(r: unknown): r is HabitRecord {
   return typeof r.habit_id === 'string' && typeof r.local_date === 'string';
 }
 
+function validateFocusSession(f: unknown): f is FocusSession {
+  if (f === null) return true;
+  if (!isObject(f)) return false;
+  if (typeof f.id !== 'string') return false;
+  if (
+    f.activity !== 'workout' &&
+    f.activity !== 'padel' &&
+    f.activity !== 'masak' &&
+    f.activity !== 'solat_ngaji'
+  ) {
+    return false;
+  }
+  if (typeof f.durationMinutes !== 'number' || !Number.isFinite(f.durationMinutes)) return false;
+  if (typeof f.startedAt !== 'number' || !Number.isFinite(f.startedAt)) return false;
+  if (typeof f.endsAt !== 'number' || !Number.isFinite(f.endsAt)) return false;
+  if (f.status !== 'running' && f.status !== 'completed') return false;
+  if (f.completedAt !== undefined && (typeof f.completedAt !== 'number' || !Number.isFinite(f.completedAt))) {
+    return false;
+  }
+  return true;
+}
+
 function validatePersistedState(s: unknown): s is PersistedState {
   if (!isObject(s)) return false;
 
@@ -263,6 +287,7 @@ function validatePersistedState(s: unknown): s is PersistedState {
       if (typeof m.ts !== 'number' || !Number.isFinite(m.ts)) return false;
     }
   }
+  if (obj.focusSession !== undefined && !validateFocusSession(obj.focusSession)) return false;
 
   return true;
 }
@@ -279,6 +304,9 @@ export interface StoreActions {
   setPetStatsAndLastChecked: (stats: Stats, lastChecked: number) => void;
   setLastChecked: (ts: number) => void;
   markSocialInteraction: (ts?: number) => void;
+  startFocusSession: (activity: FocusActivity, durationMinutes: number, now?: number) => boolean;
+  completeFocusSession: (now?: number) => boolean;
+  clearFocusSession: () => void;
 
   // Coin / shop / inventory
   addCoins: (delta: number) => void;
@@ -340,6 +368,56 @@ export const useStore = create<Store>()(
 
       markSocialInteraction: (ts = Date.now()) =>
         set((s) => ({ pet: { ...s.pet, lastInteractionAt: ts } })),
+
+      startFocusSession: (activity, durationMinutes, now = Date.now()) => {
+        const cur = get();
+        if (cur.focusSession?.status === 'running') return false;
+        const safeMinutes = Math.max(1, Math.min(180, Math.floor(durationMinutes)));
+        const endsAt = now + safeMinutes * 60_000;
+        set((s) => ({
+          pet: { ...s.pet, currentState: 'focusing' },
+          focusSession: {
+            id: `focus_${now}`,
+            activity,
+            durationMinutes: safeMinutes,
+            startedAt: now,
+            endsAt,
+            status: 'running',
+          },
+        }));
+        return true;
+      },
+
+      completeFocusSession: (now = Date.now()) => {
+        const cur = get();
+        const session = cur.focusSession;
+        if (!session || session.status !== 'running') return false;
+        const rewardCoins = Math.min(100, Math.max(1, Math.floor(session.durationMinutes * 2)));
+        set((s) => {
+          const nextStats: Stats = {
+            ...s.pet.stats,
+            energy: clampStat(s.pet.stats.energy - 20),
+            happiness: clampStat(s.pet.stats.happiness + 15),
+          };
+          return {
+            coins: Math.max(0, s.coins + rewardCoins),
+            pet: {
+              ...s.pet,
+              currentState: 'idle',
+              stats: nextStats,
+              lastInteractionAt: now,
+            },
+            focusSession: {
+              ...session,
+              status: 'completed',
+              completedAt: now,
+            },
+          };
+        });
+        return true;
+      },
+
+      clearFocusSession: () => set(() => ({ focusSession: null })),
 
       addCoins: (delta) =>
         set((s) => ({ coins: Math.max(0, s.coins + delta) })),
@@ -458,6 +536,7 @@ export const useStore = create<Store>()(
         bgmVolume: s.bgmVolume,
         sfxVolume: s.sfxVolume,
         chatHistory: s.chatHistory,
+        focusSession: s.focusSession,
       }),
       // Reset stale or future save data on version mismatch. This intentionally
       // clears old local stats/items/chats after a reset release.
@@ -480,6 +559,7 @@ export const useStore = create<Store>()(
             bgmVolume: persisted.bgmVolume ?? 0.5,
             sfxVolume: persisted.sfxVolume ?? 0.5,
             chatHistory: persisted.chatHistory ?? [],
+            focusSession: persisted.focusSession ?? null,
           };
         }
         return createDefaultPersistedState();
@@ -505,6 +585,7 @@ export const useStore = create<Store>()(
           bgmVolume: persisted.bgmVolume ?? current.bgmVolume,
           sfxVolume: persisted.sfxVolume ?? current.sfxVolume,
           chatHistory: persisted.chatHistory ?? current.chatHistory,
+          focusSession: persisted.focusSession ?? current.focusSession,
         };
       },
     },

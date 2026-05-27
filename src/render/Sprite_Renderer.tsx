@@ -42,6 +42,8 @@ function framesForState(state: CatState, energy: number, wasSleeping: boolean): 
       return ASSET_MAP.pooping;
     case 'sleeping':
       return ASSET_MAP.sleeping;
+    case 'focusing':
+      return ASSET_MAP.focusing;
     case 'clicked_left':
       return ASSET_MAP.clicked_left;
     case 'clicked_right':
@@ -50,7 +52,9 @@ function framesForState(state: CatState, energy: number, wasSleeping: boolean): 
 }
 
 function frameDurationFor(state: CatState): number {
-  return state === 'sleeping' ? FRAME_DURATION_MS_SLEEP : FRAME_DURATION_MS_ACTIVE;
+  if (state === 'sleeping') return FRAME_DURATION_MS_SLEEP;
+  if (state === 'focusing') return 400;
+  return FRAME_DURATION_MS_ACTIVE;
 }
 
 /**
@@ -117,7 +121,7 @@ export function Sprite_Renderer({
         // Disable pinch/scroll while dragging — the .touch-none utility class
         // also enforces this; this is a defense-in-depth fallback.
         touchAction: 'none',
-        cursor: currentState === 'sleeping' ? 'default' : 'grab',
+        cursor: currentState === 'sleeping' || currentState === 'focusing' ? 'default' : 'grab',
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

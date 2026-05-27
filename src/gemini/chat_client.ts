@@ -135,6 +135,9 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
   }
 
   const text = payload.userMessage.trim();
+  if (payload.currentState === 'focusing') {
+    return appendLocalExchange(text, 'Mochi lagi fokus dulu, meow.');
+  }
   const intent = detectChatIntent(text);
   if (intent === 'wake') {
     cancelAllTransientTimers();

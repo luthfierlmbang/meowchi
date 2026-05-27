@@ -8,6 +8,7 @@ export type CatState =
   | 'eating'
   | 'pooping'
   | 'sleeping'
+  | 'focusing'
   | 'clicked_left'
   | 'clicked_right';
 
@@ -58,6 +59,18 @@ export interface ChatMessage {
   ts: number;
 }
 
+export type FocusActivity = 'workout' | 'padel' | 'masak' | 'solat_ngaji';
+
+export interface FocusSession {
+  id: string;
+  activity: FocusActivity;
+  durationMinutes: number;
+  startedAt: number;
+  endsAt: number;
+  status: 'running' | 'completed';
+  completedAt?: number;
+}
+
 export interface PersistedState {
   pet: Pet;
   placed_items: PlacedItem[];
@@ -68,6 +81,7 @@ export interface PersistedState {
   bgmVolume: number;
   sfxVolume: number;
   chatHistory: ChatMessage[];
+  focusSession: FocusSession | null;
 }
 
 // Top-level localStorage shape
@@ -103,5 +117,6 @@ export function createDefaultPersistedState(): PersistedState {
     bgmVolume: 0.5,
     sfxVolume: 0.5,
     chatHistory: [],
+    focusSession: null,
   };
 }

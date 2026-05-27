@@ -1,5 +1,9 @@
 import { useStore } from '../state/store';
-import { applyDecay, HAPPINESS_NEGLECT_GRACE_HOURS } from './stat_engine';
+import {
+  applyDecay,
+  applyFocusDecay,
+  HAPPINESS_NEGLECT_GRACE_HOURS,
+} from './stat_engine';
 import type { StateEvent } from './state_machine';
 
 const TICK_INTERVAL_MS = 60_000;
@@ -53,6 +57,14 @@ export function runTickOnce(handlers: TickHandlers = {}): void {
 
   const isSleeping = state.pet.currentState === 'sleeping';
   const now = Date.now();
+  if (state.pet.currentState === 'focusing') {
+    const next = applyFocusDecay(cur, TICK_DELTA_SECONDS);
+    state.setPetStatsAndLastChecked(next, now);
+    if (handlers.onForcedEvent && next.energy === 0 && cur.energy > 0) {
+      handlers.onForcedEvent({ kind: 'forced_sleeping' });
+    }
+    return;
+  }
   const lastInteractionAt = state.pet.lastInteractionAt ?? state.pet.lastChecked;
   const socialIdle = now - lastInteractionAt >= HAPPINESS_NEGLECT_GRACE_HOURS * 3_600_000;
   const next = applyDecay(cur, TICK_DELTA_SECONDS, hungerZero, anyLow40, isSleeping, socialIdle);

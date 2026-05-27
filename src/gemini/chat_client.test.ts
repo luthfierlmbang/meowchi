@@ -50,4 +50,17 @@ describe('chat-driven pet state', () => {
     expect(useStore.getState().pet.currentState).toBe('idle');
     expect(reply.text).toContain('bangun');
   });
+
+  it('does not change state from focus commands while Mochi is focusing', async () => {
+    useStore.getState().setPetState('focusing');
+
+    const reply = await sendMessage({
+      stats: baseStats,
+      currentState: 'focusing',
+      userMessage: 'Mochi tidur dulu',
+    });
+
+    expect(useStore.getState().pet.currentState).toBe('focusing');
+    expect(reply.text).toContain('fokus');
+  });
 });

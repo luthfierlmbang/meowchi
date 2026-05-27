@@ -29,6 +29,7 @@ const persistedStateArb: fc.Arbitrary<PersistedState> = fc.record({
   bgmVolume: fc.float({ min: 0, max: 1, noNaN: true }),
   sfxVolume: fc.float({ min: 0, max: 1, noNaN: true }),
   chatHistory: fc.constant([]),
+  focusSession: fc.constant(null),
 });
 
 describe('Property 10: Round-trip persistence (Zustand)', () => {
@@ -82,5 +83,6 @@ describe('Default state factory', () => {
     expect(s.pet.stats.happiness).toBe(100);
     expect(s.pet.currentState).toBe('idle');
     expect(s.coins).toBe(200);
+    expect(s.focusSession).toBeNull();
   });
 });
