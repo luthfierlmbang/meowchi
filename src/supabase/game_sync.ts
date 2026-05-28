@@ -1,6 +1,8 @@
 import { useStore } from '../state/store';
 import type { PersistedState } from '../state/types';
 import { supabase } from './client';
+import { applyOfflineCatchUp } from '../engine/stat_engine';
+import { isSleepHour } from '../engine/sleep_schedule';
 
 type GameSaveRow = {
   user_id: string;
@@ -56,7 +58,25 @@ export async function loadGameSave(userId: string): Promise<void> {
 
   if (error) throw error;
   if (data?.data) {
-    applyPersistedState(data.data);
+    const catchUp = applyOfflineCatchUp({ pet: data.data.pet });
+    const caughtUpData: PersistedState = {
+      ...data.data,
+      pet: {
+        ...data.data.pet,
+        stats: catchUp.newStats,
+        lastChecked: catchUp.newLastChecked,
+        currentState:
+          data.data.pet.currentState === 'sleeping' &&
+          catchUp.newStats.energy === 100 &&
+          !isSleepHour()
+            ? 'idle'
+            : data.data.pet.currentState,
+      },
+    };
+    applyPersistedState(caughtUpData);
+    if (catchUp.hoursApplied > 0) {
+      await saveGameNow(userId);
+    }
     return;
   }
   await saveGameNow(userId);
