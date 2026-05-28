@@ -1,5 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getConfig, disableFeature, getFeatureError } from '../state/Config_Store';
+import { disableFeature, getFeatureError } from '../state/Config_Store';
 import { useStore } from '../state/store';
 import type { CatState } from '../state/types';
 import type { ChatMessage } from '../state/types';
@@ -44,8 +43,6 @@ export class ChatClientError extends Error {
 }
 
 let _inFlight: AbortController | null = null;
-let _genAi: GoogleGenerativeAI | null = null;
-
 type ChatIntent = 'sleep' | 'wake' | null;
 
 function detectChatIntent(message: string): ChatIntent {
@@ -72,20 +69,6 @@ function appendLocalExchange(userText: string, replyText: string): ChatMessage {
   state.addChatMessage(mochiMsg);
   state.markSocialInteraction(now);
   return mochiMsg;
-}
-
-function getGenAi(): GoogleGenerativeAI {
-  const cfg = getConfig();
-  if (!cfg.chatEnabled || !cfg.geminiKey) {
-    throw new ChatClientError(
-      'Fitur chat dinonaktifkan: API key Gemini belum dikonfigurasi.',
-      'feature_disabled',
-    );
-  }
-  if (!_genAi) {
-    _genAi = new GoogleGenerativeAI(cfg.geminiKey);
-  }
-  return _genAi;
 }
 
 /**
@@ -157,24 +140,31 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
     throw new ChatClientError('Mochi terlalu sedih untuk berbicara.', 'happiness_locked');
   }
 
-  const systemInstruction = buildSystemInstruction(payload); // may throw instruction_build_failed
-  const genAi = getGenAi();
-  const model = genAi.getGenerativeModel({ model: CHAT_MODEL, systemInstruction });
+  buildSystemInstruction(payload); // validate stats before calling backend
 
   const ac = new AbortController();
   _inFlight = ac;
   const timeout = setTimeout(() => ac.abort(), CHAT_TIMEOUT_MS);
 
   try {
-    // Run generateContent against the user message
     const response = await Promise.race([
-      model.generateContent(payload.userMessage),
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: ac.signal,
+      }),
       new Promise<never>((_resolve, reject) => {
         ac.signal.addEventListener('abort', () => reject(new ChatClientError('Timeout', 'timeout')));
       }),
     ]);
 
-    const text = (response as { response: { text(): string } }).response?.text?.() ?? '';
+    const res = response as Response;
+    const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+    if (!res.ok) {
+      throw new ChatClientError(data.error || 'Gemini chat gagal.', res.status === 429 ? 'quota' : 'network');
+    }
+    const text = data.text ?? '';
     if (!text || typeof text !== 'string') {
       throw new ChatClientError('Respons tidak valid dari Gemini.', 'malformed_response');
     }
@@ -233,7 +223,6 @@ export function cancelInFlight(): void {
  */
 export function _resetForTest(): void {
   _inFlight = null;
-  _genAi = null;
 }
 
 /**

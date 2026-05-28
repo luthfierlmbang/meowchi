@@ -17,7 +17,7 @@ let _config: ConfigSnapshot | null = null;
 const _featureErrors: Map<FeatureName, FeatureError> = new Map();
 
 /**
- * Read VITE_GEMINI_API_KEY exactly once at bootstrap.
+ * Read frontend-safe feature config exactly once at bootstrap.
  * Must be called before any feature component mounts (Req 1.2).
  */
 export function loadConfig(): void {
@@ -26,7 +26,7 @@ export function loadConfig(): void {
   const key = raw && raw.trim().length > 0 ? raw.trim() : null;
   _config = {
     geminiKey: key,
-    chatEnabled: key !== null,
+    chatEnabled: true,
     visionEnabled: key !== null,
   };
 }
