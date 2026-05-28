@@ -2,7 +2,7 @@ export type FeatureName = 'chat' | 'vision';
 export type DisableCause = 'auth' | 'quota' | 'missing_key';
 
 export interface ConfigSnapshot {
-  geminiKey: string | null;   // null when undefined or whitespace-only (Req 1.3)
+  geminiKey: string | null;
   chatEnabled: boolean;
   visionEnabled: boolean;
 }
@@ -21,13 +21,10 @@ const _featureErrors: Map<FeatureName, FeatureError> = new Map();
  * Must be called before any feature component mounts (Req 1.2).
  */
 export function loadConfig(): void {
-  const raw = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
-  // Treat undefined or whitespace-only as missing (Req 1.3)
-  const key = raw && raw.trim().length > 0 ? raw.trim() : null;
   _config = {
-    geminiKey: key,
+    geminiKey: null,
     chatEnabled: true,
-    visionEnabled: key !== null,
+    visionEnabled: true,
   };
 }
 

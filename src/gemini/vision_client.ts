@@ -1,5 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
-import { getConfig, disableFeature, getFeatureError } from '../state/Config_Store';
+import { disableFeature, getFeatureError } from '../state/Config_Store';
 
 export const VISION_MODEL = 'gemini-2.5-flash';
 export const VISION_TIMEOUT_MS = 30_000;
@@ -30,22 +29,6 @@ export class VisionClientError extends Error {
     super(message);
     this.name = 'VisionClientError';
   }
-}
-
-let _genAi: GoogleGenerativeAI | null = null;
-
-function getGenAi(): GoogleGenerativeAI {
-  const cfg = getConfig();
-  if (!cfg.visionEnabled || !cfg.geminiKey) {
-    throw new VisionClientError(
-      'Fitur vision dinonaktifkan: API key Gemini belum dikonfigurasi.',
-      'feature_disabled',
-    );
-  }
-  if (!_genAi) {
-    _genAi = new GoogleGenerativeAI(cfg.geminiKey);
-  }
-  return _genAi;
 }
 
 function blobToBase64(blob: Blob): Promise<string> {
@@ -98,50 +81,19 @@ export async function verifyHabitPhoto(
   habitDescription: string,
 ): Promise<VisionVerdict> {
   validateBlob(imageBlob);
-  const genAi = getGenAi();
   const base64 = await blobToBase64(imageBlob);
-
-  const model = genAi.getGenerativeModel({
-    model: VISION_MODEL,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: SchemaType.OBJECT,
-        properties: {
-          verdict: {
-            type: SchemaType.STRING,
-            format: 'enum',
-            enum: ['valid', 'fraud', 'mismatch'],
-          },
-          reason: { type: SchemaType.STRING },
-          confidence: { type: SchemaType.NUMBER },
-        },
-        required: ['verdict', 'reason', 'confidence'],
-      },
-    },
-  });
-
-  const instruction = [
-    `Tugas: verifikasi apakah foto ini adalah bukti otentik untuk habit "${habitDescription}".`,
-    '',
-    'Aturan keputusan:',
-    '- "valid": foto adalah objek FISIK NYATA yang sesuai dengan habit dan tidak ada indikasi kecurangan.',
-    '- "fraud": ada indikasi foto dari layar (foto monitor/HP), gambar yang difoto ulang, screenshot, atau hasil edit/gambar generated.',
-    '- "mismatch": foto tampak nyata tapi tidak sesuai dengan habit yang divalidasi.',
-    '',
-    'Kembalikan JSON sesuai schema {verdict, reason, confidence}. `confidence` adalah angka 0..1 yang merepresentasikan keyakinanmu pada putusan.',
-    'Sertakan alasan SINGKAT (maks 200 karakter) dalam Bahasa Indonesia di field `reason`.',
-  ].join('\n');
 
   const ac = new AbortController();
   const timeout = setTimeout(() => ac.abort(), VISION_TIMEOUT_MS);
 
   try {
     const response = await Promise.race([
-      model.generateContent([
-        { inlineData: { mimeType: 'image/jpeg', data: base64 } },
-        { text: instruction },
-      ]),
+      fetch('/api/vision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, habitDescription }),
+        signal: ac.signal,
+      }),
       new Promise<never>((_resolve, reject) => {
         ac.signal.addEventListener('abort', () =>
           reject(new VisionClientError('Timeout', 'timeout')),
@@ -149,12 +101,11 @@ export async function verifyHabitPhoto(
       }),
     ]);
 
-    const text = (response as { response: { text(): string } }).response?.text?.() ?? '';
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      throw new VisionClientError('Respons Gemini bukan JSON valid.', 'malformed_response');
+    const res = response as Response;
+    const parsed = (await res.json().catch(() => null)) as unknown;
+    if (!res.ok) {
+      const e = parsed as { error?: string } | null;
+      throw new VisionClientError(e?.error || 'Gemini vision gagal.', res.status === 429 ? 'quota' : 'network');
     }
     if (!isValidVerdict(parsed)) {
       throw new VisionClientError('Skema respons tidak sesuai.', 'malformed_response');
@@ -185,7 +136,7 @@ export async function verifyHabitPhoto(
 }
 
 export function _resetForTest(): void {
-  _genAi = null;
+  // Kept for test compatibility.
 }
 
 export function getVisionError() {
