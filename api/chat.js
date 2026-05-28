@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const CHAT_MODEL = 'gemini-2.5-flash';
+const CHAT_MODEL = 'gemini-2.5-flash-lite';
 const CHAT_MAX_USER_CHARS = 500;
 
 function buildSystemInstruction(payload) {

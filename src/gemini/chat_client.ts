@@ -5,7 +5,7 @@ import type { ChatMessage } from '../state/types';
 import { cancelAllTransientTimers } from '../engine/transient_timers';
 export type { ChatMessage };
 
-export const CHAT_MODEL = 'gemini-2.5-flash';
+export const CHAT_MODEL = 'gemini-2.5-flash-lite';
 export const CHAT_TIMEOUT_MS = 30_000;
 export const CHAT_MAX_USER_CHARS = 500;
 

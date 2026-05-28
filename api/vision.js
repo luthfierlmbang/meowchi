@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
-const VISION_MODEL = 'gemini-2.5-flash';
+const VISION_MODEL = 'gemini-2.5-flash-lite';
 const VISION_MAX_BASE64_CHARS = 7_000_000;
 
 function sendJson(res, status, body) {
