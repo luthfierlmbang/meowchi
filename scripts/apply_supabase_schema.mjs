@@ -19,8 +19,8 @@ try {
     left join pg_policy p on p.polrelid = c.oid
     join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
-      and c.relname = 'game_saves'
-    order by p.polname nulls last
+      and c.relname in ('game_saves', 'admin_users')
+    order by c.relname, p.polname nulls last
   `;
   console.log(JSON.stringify(rows, null, 2));
 } finally {

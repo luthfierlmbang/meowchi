@@ -44,18 +44,12 @@ import {
 import { loadGameSave, startCloudSync, stopCloudSync } from './supabase/game_sync';
 import type { Session } from '@supabase/supabase-js';
 import { isSleepHour } from './engine/sleep_schedule';
+import { checkAdminAccess } from './supabase/admin';
 
 const MIN_SPLASH_MS = 700;
 const MIN_LOADING_MS = 900;
 const INTRO_DONE_KEY = 'meowchi_intro_done';
 type BootStage = 'splash' | 'loading' | 'ready';
-
-function isAdminSession(session: Session | null): boolean {
-  const raw = import.meta.env.VITE_ADMIN_EMAILS as string | undefined;
-  if (!raw || !session?.user.email) return false;
-  const allowed = raw.split(',').map((email) => email.trim().toLowerCase()).filter(Boolean);
-  return allowed.includes(session.user.email.toLowerCase());
-}
 
 /**
  * Mochi shell — wires every module into a single mobile-first viewport
@@ -86,6 +80,7 @@ export default function App() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const currentState = useStore((s) => s.pet.currentState);
   const focusSession = useStore((s) => s.focusSession);
@@ -127,10 +122,12 @@ export default function App() {
         if (nextSession) {
           await loadGameSave(nextSession.user.id);
           startCloudSync(nextSession.user.id);
+          setIsAdmin(await checkAdminAccess(nextSession.user.email));
           localStorage.setItem(INTRO_DONE_KEY, '1');
           setIntroDone(true);
         } else {
           stopCloudSync();
+          setIsAdmin(false);
           localStorage.removeItem(INTRO_DONE_KEY);
           setIntroStartStep('login');
           setIntroDone(false);
@@ -143,9 +140,13 @@ export default function App() {
     const { data } = supabase!.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       if (nextSession) {
-        void loadGameSave(nextSession.user.id).then(() => startCloudSync(nextSession.user.id));
+        void Promise.all([
+          loadGameSave(nextSession.user.id).then(() => startCloudSync(nextSession.user.id)),
+          checkAdminAccess(nextSession.user.email).then(setIsAdmin),
+        ]);
       } else {
         stopCloudSync();
+        setIsAdmin(false);
       }
     });
 
@@ -317,6 +318,7 @@ export default function App() {
       console.warn('[Supabase Auth] sign out failed:', err);
     });
     setSession(null);
+    setIsAdmin(false);
     stopCloudSync();
     localStorage.removeItem(INTRO_DONE_KEY);
     setMoreOpen(false);
@@ -350,6 +352,7 @@ export default function App() {
             if (nextSession) {
               await loadGameSave(nextSession.user.id);
               startCloudSync(nextSession.user.id);
+              setIsAdmin(await checkAdminAccess(nextSession.user.email));
             }
           }
           localStorage.setItem(INTRO_DONE_KEY, '1');
@@ -401,7 +404,7 @@ export default function App() {
         onFocus={() => setFocusOpen(true)}
         onSettings={() => setSettingsOpen(true)}
         onAdmin={() => setAdminOpen(true)}
-        showAdmin={isAdminSession(session)}
+        showAdmin={isAdmin}
         onLogout={handleLogout}
       />
 
