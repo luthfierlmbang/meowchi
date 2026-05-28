@@ -486,6 +486,15 @@ button {
   object-fit: contain;
 }
 
+.meow-login-error {
+  margin: 0;
+  color: #c62828;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .meow-field {
   display: grid;
   gap: 8px;

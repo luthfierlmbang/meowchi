@@ -33,6 +33,15 @@ import { SplashScreen } from './ui/SplashScreen';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { IntroScreens, type IntroStep } from './ui/IntroScreens';
 import { MeowchiTopNav } from './ui/MeowchiUI';
+import {
+  getCurrentSession,
+  isSupabaseConfigured,
+  signInOrSignUp,
+  signOut,
+  supabase,
+} from './supabase/client';
+import { loadGameSave, startCloudSync, stopCloudSync } from './supabase/game_sync';
+import type { Session } from '@supabase/supabase-js';
 
 const MIN_SPLASH_MS = 700;
 const MIN_LOADING_MS = 900;
@@ -62,6 +71,8 @@ export default function App() {
   const [bootStage, setBootStage] = useState<BootStage>('splash');
   const [introDone, setIntroDone] = useState(() => localStorage.getItem(INTRO_DONE_KEY) === '1');
   const [introStartStep, setIntroStartStep] = useState<IntroStep>('letter');
+  const [authReady, setAuthReady] = useState(!isSupabaseConfigured);
+  const [session, setSession] = useState<Session | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [albumOpen, setAlbumOpen] = useState(false);
@@ -99,6 +110,46 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !ready) return undefined;
+    let cancelled = false;
+
+    void getCurrentSession()
+      .then(async (nextSession) => {
+        if (cancelled) return;
+        setSession(nextSession);
+        if (nextSession) {
+          await loadGameSave(nextSession.user.id);
+          startCloudSync(nextSession.user.id);
+          localStorage.setItem(INTRO_DONE_KEY, '1');
+          setIntroDone(true);
+        } else {
+          stopCloudSync();
+          localStorage.removeItem(INTRO_DONE_KEY);
+          setIntroStartStep('login');
+          setIntroDone(false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAuthReady(true);
+      });
+
+    const { data } = supabase!.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      if (nextSession) {
+        void loadGameSave(nextSession.user.id).then(() => startCloudSync(nextSession.user.id));
+      } else {
+        stopCloudSync();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      data.subscription.unsubscribe();
+      stopCloudSync();
+    };
+  }, [ready]);
 
   /**
    * Central state-machine driver.
@@ -256,6 +307,12 @@ export default function App() {
   };
 
   const handleLogout = useCallback(() => {
+    void signOut().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.warn('[Supabase Auth] sign out failed:', err);
+    });
+    setSession(null);
+    stopCloudSync();
     localStorage.removeItem(INTRO_DONE_KEY);
     setMoreOpen(false);
     setChatOpen(false);
@@ -268,7 +325,7 @@ export default function App() {
     setIntroDone(false);
   }, []);
 
-  if (!ready) {
+  if (!ready || !authReady) {
     return bootStage === 'loading' ? <LoadingScreen /> : <SplashScreen />;
   }
 
@@ -276,7 +333,19 @@ export default function App() {
     return (
       <IntroScreens
         initialStep={introStartStep}
-        onDone={() => {
+        onDone={async (credentials) => {
+          if (isSupabaseConfigured) {
+            if (!credentials) throw new Error('Email dan password wajib diisi.');
+            const nextSession = await signInOrSignUp(credentials.email, credentials.password);
+            if (!nextSession) {
+              throw new Error('Cek email kamu untuk konfirmasi akun, lalu login lagi.');
+            }
+            setSession(nextSession);
+            if (nextSession) {
+              await loadGameSave(nextSession.user.id);
+              startCloudSync(nextSession.user.id);
+            }
+          }
           localStorage.setItem(INTRO_DONE_KEY, '1');
           setIntroStartStep('letter');
           setIntroDone(true);

@@ -76,17 +76,26 @@ export function MeowchiField({
   placeholder,
   type = 'text',
   icon,
+  value,
+  onChange,
 }: {
   label: string;
   placeholder: string;
   type?: string;
   icon?: IconName;
+  value?: string;
+  onChange?: (value: string) => void;
 }) {
   return (
     <label className="meow-field">
       <span>{label}</span>
       <div>
-        <input type={type} placeholder={placeholder} />
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+        />
         {icon && <GameIcon name={icon} />}
       </div>
     </label>

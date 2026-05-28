@@ -24,10 +24,14 @@ export function IntroScreens({
   onDone,
   initialStep = 'letter',
 }: {
-  onDone: () => void;
+  onDone: (credentials?: { email: string; password: string }) => Promise<void> | void;
   initialStep?: IntroStep;
 }) {
   const [step, setStep] = useState<IntroStep>(initialStep);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (step === 'letter') {
     return (
@@ -76,10 +80,37 @@ export function IntroScreens({
       <div className="meow-intro-center">
         <MeowchiCard className="meow-login-card">
           <img className="meow-login-logo pixel-img" src="/assets/figma/login-logo.png" alt="Login" />
-          <MeowchiField label="Email" placeholder="Enter your email" />
-          <MeowchiField label="Password" placeholder="Enter your password" type="password" icon="search" />
-          <MeowchiButton tone="success" onClick={onDone}>
-            LOGIN
+          <MeowchiField label="Email" placeholder="Enter your email" value={email} onChange={setEmail} />
+          <MeowchiField
+            label="Password"
+            placeholder="Enter your password"
+            type="password"
+            icon="search"
+            value={password}
+            onChange={setPassword}
+          />
+          {error && <p className="meow-login-error">{error}</p>}
+          <MeowchiButton
+            tone="success"
+            disabled={loading}
+            onClick={async () => {
+              setError(null);
+              if (!email.trim() || !password.trim()) {
+                setError('Email dan password wajib diisi.');
+                return;
+              }
+              setLoading(true);
+              try {
+                await onDone({ email, password });
+              } catch (err) {
+                const e = err as Error;
+                setError(e?.message || 'Login gagal.');
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            {loading ? 'LOADING...' : 'LOGIN'}
           </MeowchiButton>
         </MeowchiCard>
       </div>
