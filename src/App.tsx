@@ -29,6 +29,7 @@ import { FocusTimerModal } from './ui/FocusTimerModal';
 import { PhotoAlbumModal } from './ui/PhotoAlbumModal';
 import { HabitTrackerModal } from './ui/HabitTrackerModal';
 import { SettingsModal } from './ui/SettingsModal';
+import { AdminDashboardModal } from './ui/AdminDashboardModal';
 import { SplashScreen } from './ui/SplashScreen';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { IntroScreens, type IntroStep } from './ui/IntroScreens';
@@ -42,15 +43,18 @@ import {
 } from './supabase/client';
 import { loadGameSave, startCloudSync, stopCloudSync } from './supabase/game_sync';
 import type { Session } from '@supabase/supabase-js';
+import { isSleepHour } from './engine/sleep_schedule';
 
 const MIN_SPLASH_MS = 700;
 const MIN_LOADING_MS = 900;
 const INTRO_DONE_KEY = 'meowchi_intro_done';
 type BootStage = 'splash' | 'loading' | 'ready';
 
-/** Hours (local) during which Mochi should be sleeping: 22:00 – 05:59 */
-function isSleepHour(hour: number): boolean {
-  return hour >= 22 || hour < 6;
+function isAdminSession(session: Session | null): boolean {
+  const raw = import.meta.env.VITE_ADMIN_EMAILS as string | undefined;
+  if (!raw || !session?.user.email) return false;
+  const allowed = raw.split(',').map((email) => email.trim().toLowerCase()).filter(Boolean);
+  return allowed.includes(session.user.email.toLowerCase());
 }
 
 /**
@@ -81,6 +85,7 @@ export default function App() {
   const [focusOpen, setFocusOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   const currentState = useStore((s) => s.pet.currentState);
   const focusSession = useStore((s) => s.focusSession);
@@ -321,6 +326,7 @@ export default function App() {
     setHabitOpen(false);
     setInventoryOpen(false);
     setFocusOpen(false);
+    setAdminOpen(false);
     setIntroStartStep('login');
     setIntroDone(false);
   }, []);
@@ -394,6 +400,8 @@ export default function App() {
         onInventory={() => setInventoryOpen(true)}
         onFocus={() => setFocusOpen(true)}
         onSettings={() => setSettingsOpen(true)}
+        onAdmin={() => setAdminOpen(true)}
+        showAdmin={isAdminSession(session)}
         onLogout={handleLogout}
       />
 
@@ -405,6 +413,7 @@ export default function App() {
       <InventoryDrawer open={inventoryOpen} onClose={() => setInventoryOpen(false)} />
       <FocusTimerModal open={focusOpen} onClose={() => setFocusOpen(false)} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AdminDashboardModal open={adminOpen} onClose={() => setAdminOpen(false)} />
 
       {/* Toast layer */}
       <Toast />

@@ -10,8 +10,10 @@ export interface MoreSheetProps {
   onInventory: () => void;
   onFocus: () => void;
   onSettings: () => void;
+  onAdmin: () => void;
   onLogout: () => void;
   isSleeping: boolean;
+  showAdmin: boolean;
 }
 
 interface SheetBtnProps {
@@ -50,8 +52,10 @@ export function MoreSheet({
   onInventory,
   onFocus,
   onSettings,
+  onAdmin,
   onLogout,
   isSleeping,
+  showAdmin,
 }: MoreSheetProps) {
   if (!open) return null;
   return (
@@ -107,6 +111,14 @@ export function MoreSheet({
           sublabel="Atur volume suara & musik"
           onClick={() => { onSettings(); onClose(); }}
         />
+        {showAdmin && (
+          <SheetBtn
+            icon="crown"
+            label="Dashboard Maintain"
+            sublabel="Atur koin, mood, dan reward"
+            onClick={() => { onAdmin(); onClose(); }}
+          />
+        )}
         <SheetBtn
           icon="key"
           label="Logout"

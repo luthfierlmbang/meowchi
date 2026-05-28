@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
 import { useStore } from './state/store';
 import { boot } from './boot';
 import * as preloader from './assets/Asset_Preloader';
@@ -20,7 +20,13 @@ describe('Boot sequence offline catch-up', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('wakes up the cat if energy reaches 100 while sleeping offline', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-28T12:00:00+07:00'));
     useStore.getState()._resetToDefaults();
     
     // Set pet to sleeping and energy to 80, checked 2 hours ago
@@ -42,6 +48,29 @@ describe('Boot sequence offline catch-up', () => {
     const pet = useStore.getState().pet;
     expect(pet.stats.energy).toBe(100);
     expect(pet.currentState).toBe('idle');
+  });
+
+  it('keeps the cat sleeping at full energy during scheduled sleep hours', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-28T23:00:00+07:00'));
+    useStore.getState()._resetToDefaults();
+
+    const twoHoursAgo = Date.now() - 2 * 3600 * 1000;
+    useStore.setState({
+      pet: {
+        currentState: 'sleeping',
+        stats: { hunger: 100, energy: 80, bladder: 100, happiness: 100 },
+        position: { x: 100, y: 100 },
+        lastChecked: twoHoursAgo,
+        lastInteractionAt: Date.now(),
+      }
+    });
+
+    await boot();
+
+    const pet = useStore.getState().pet;
+    expect(pet.stats.energy).toBe(100);
+    expect(pet.currentState).toBe('sleeping');
   });
 
   it('keeps the cat sleeping if energy is still below 100 after offline catch-up', async () => {

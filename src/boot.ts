@@ -3,6 +3,7 @@ import { preloadAll } from './assets/Asset_Preloader';
 import { useStore, registerFlushListeners } from './state/store';
 import { applyOfflineCatchUp } from './engine/stat_engine';
 import { preloadSounds } from './engine/sound';
+import { isSleepHour } from './engine/sleep_schedule';
 
 export interface BootResult {
   /** Hours of decay actually applied (0 when clock skewed backward). */
@@ -35,7 +36,7 @@ export async function boot(): Promise<BootResult> {
   const state = useStore.getState();
   const result = applyOfflineCatchUp({ pet: state.pet });
   state.setPetStatsAndLastChecked(result.newStats, result.newLastChecked);
-  if (state.pet.currentState === 'sleeping' && result.newStats.energy === 100) {
+  if (state.pet.currentState === 'sleeping' && result.newStats.energy === 100 && !isSleepHour()) {
     state.setPetState('idle');
   }
 

@@ -5,6 +5,7 @@ import {
   HAPPINESS_NEGLECT_GRACE_HOURS,
 } from './stat_engine';
 import type { StateEvent } from './state_machine';
+import { isSleepHour } from './sleep_schedule';
 
 const TICK_INTERVAL_MS = 60_000;
 const TICK_DELTA_SECONDS = 60;
@@ -76,7 +77,7 @@ export function runTickOnce(handlers: TickHandlers = {}): void {
       handlers.onForcedEvent({ kind: 'forced_pooping' });
     } else if (next.energy === 0 && cur.energy > 0) {
       handlers.onForcedEvent({ kind: 'forced_sleeping' });
-    } else if (isSleeping && next.energy === 100) {
+    } else if (isSleeping && next.energy === 100 && !isSleepHour()) {
       handlers.onForcedEvent({ kind: 'wake_up' });
     }
   }

@@ -29,6 +29,11 @@ import type {
   Stats,
 } from './types';
 import { createDefaultPersistedState } from './types';
+import {
+  FOCUS_ENERGY_COST_ON_COMPLETE,
+  FOCUS_HAPPINESS_REWARD,
+  focusRewardCoins,
+} from '../features/focus/focus_rewards';
 
 // ----------------------------------------------------------------------------
 // Constants
@@ -306,10 +311,12 @@ export interface StoreActions {
   markSocialInteraction: (ts?: number) => void;
   startFocusSession: (activity: FocusActivity, durationMinutes: number, now?: number) => boolean;
   completeFocusSession: (now?: number) => boolean;
+  stopFocusSession: () => boolean;
   clearFocusSession: () => void;
 
   // Coin / shop / inventory
   addCoins: (delta: number) => void;
+  setCoins: (value: number) => void;
   atomicPurchase: (price: number, entry: InventoryEntry) => boolean;
   atomicPlaceItem: (entryId: string, x: number, y: number) => boolean;
   atomicRepositionItem: (itemId: string, x: number, y: number) => void;
@@ -392,12 +399,12 @@ export const useStore = create<Store>()(
         const cur = get();
         const session = cur.focusSession;
         if (!session || session.status !== 'running') return false;
-        const rewardCoins = Math.min(100, Math.max(1, Math.floor(session.durationMinutes * 2)));
+        const rewardCoins = focusRewardCoins(session.durationMinutes);
         set((s) => {
           const nextStats: Stats = {
             ...s.pet.stats,
-            energy: clampStat(s.pet.stats.energy - 20),
-            happiness: clampStat(s.pet.stats.happiness + 15),
+            energy: clampStat(s.pet.stats.energy - FOCUS_ENERGY_COST_ON_COMPLETE),
+            happiness: clampStat(s.pet.stats.happiness + FOCUS_HAPPINESS_REWARD),
           };
           return {
             coins: Math.max(0, s.coins + rewardCoins),
@@ -417,10 +424,23 @@ export const useStore = create<Store>()(
         return true;
       },
 
+      stopFocusSession: () => {
+        const cur = get();
+        if (cur.focusSession?.status !== 'running') return false;
+        set((s) => ({
+          pet: { ...s.pet, currentState: 'idle' },
+          focusSession: null,
+        }));
+        return true;
+      },
+
       clearFocusSession: () => set(() => ({ focusSession: null })),
 
       addCoins: (delta) =>
         set((s) => ({ coins: Math.max(0, s.coins + delta) })),
+
+      setCoins: (value) =>
+        set(() => ({ coins: Math.max(0, Math.floor(value)) })),
 
       atomicPurchase: (price, entry) => {
         const cur = get();

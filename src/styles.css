@@ -2537,6 +2537,12 @@ button {
   line-height: 1.4;
 }
 
+.meow-focus-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .meow-focus-progress {
   width: 100%;
   height: 18px;
@@ -2611,6 +2617,69 @@ button {
   grid-column: 1 / -1;
   color: #6e5540;
   font-weight: 700;
+}
+
+.meow-focus-formula {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 14px;
+  border: 2px solid #2f2418;
+  border-radius: 8px;
+  background: #fff;
+  color: #2f2418;
+}
+
+.meow-focus-formula strong,
+.meow-focus-formula small {
+  grid-column: 1 / -1;
+}
+
+.meow-focus-formula span,
+.meow-focus-formula small {
+  color: #6e5540;
+  font-weight: 800;
+}
+
+.meow-admin-screen {
+  display: grid;
+  grid-template-rows: auto 1fr 1fr;
+  gap: 14px;
+  background: #fff7e7;
+  overflow: auto;
+}
+
+.meow-admin-panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 14px 20px;
+}
+
+.meow-admin-panel h2 {
+  margin: 0;
+  color: #2f2418;
+  font-size: 18px;
+}
+
+.meow-admin-field {
+  display: grid;
+  grid-template-columns: 1fr 112px;
+  align-items: center;
+  gap: 10px;
+  color: #2f2418;
+  font-weight: 900;
+}
+
+.meow-admin-field input {
+  width: 112px;
+  padding: 10px 8px;
+  border: 2px solid #2f2418;
+  border-radius: 8px;
+  background: #fff;
+  color: #2f2418;
+  font: inherit;
+  text-align: center;
 }
 
 @media (max-width: 700px) {

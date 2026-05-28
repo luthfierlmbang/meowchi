@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useStore } from '../state/store';
 import { runTickOnce } from './tick';
 
 describe('Ticker Sleep/Wake logic', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('recharges energy when sleeping during live tick', () => {
     // Reset to defaults
     useStore.getState()._resetToDefaults();
@@ -51,6 +55,8 @@ describe('Ticker Sleep/Wake logic', () => {
   });
 
   it('triggers wake_up when sleeping energy reaches 100 during live tick', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-28T12:00:00+07:00'));
     useStore.getState()._resetToDefaults();
     useStore.getState().setPetState('sleeping');
     // Energy is 99.9 (so next tick it reaches 100)
@@ -67,6 +73,26 @@ describe('Ticker Sleep/Wake logic', () => {
     const stats = useStore.getState().pet.stats;
     expect(stats.energy).toBe(100);
     expect(onForcedEvent).toHaveBeenCalledWith({ kind: 'wake_up' });
+  });
+
+  it('keeps sleeping at full energy during scheduled sleep hours', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-28T23:00:00+07:00'));
+    useStore.getState()._resetToDefaults();
+    useStore.getState().setPetState('sleeping');
+    useStore.getState().setPetStats({
+      hunger: 100,
+      energy: 99.9,
+      bladder: 100,
+      happiness: 100,
+    });
+
+    const onForcedEvent = vi.fn();
+    runTickOnce({ onForcedEvent });
+
+    const stats = useStore.getState().pet.stats;
+    expect(stats.energy).toBe(100);
+    expect(onForcedEvent).not.toHaveBeenCalledWith({ kind: 'wake_up' });
   });
 
   it('decays energy normally when not sleeping', () => {

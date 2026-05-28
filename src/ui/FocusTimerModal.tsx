@@ -4,6 +4,13 @@ import type { FocusActivity } from '../state/types';
 import { useStore } from '../state/store';
 import { AnimatedSprite } from './AnimatedSprite';
 import { MeowchiButton, MeowchiTopNav } from './MeowchiUI';
+import {
+  FOCUS_COIN_PER_MINUTE,
+  FOCUS_ENERGY_COST_ON_COMPLETE,
+  FOCUS_HAPPINESS_REWARD,
+  FOCUS_MAX_COINS,
+  focusRewardCoins,
+} from '../features/focus/focus_rewards';
 
 export interface FocusTimerModalProps {
   open: boolean;
@@ -46,6 +53,7 @@ export function FocusTimerModal({ open, onClose }: FocusTimerModalProps) {
   const [now, setNow] = useState(() => Date.now());
   const focusSession = useStore((s) => s.focusSession);
   const startFocusSession = useStore((s) => s.startFocusSession);
+  const stopFocusSession = useStore((s) => s.stopFocusSession);
   const clearFocusSession = useStore((s) => s.clearFocusSession);
 
   useEffect(() => {
@@ -67,7 +75,8 @@ export function FocusTimerModal({ open, onClose }: FocusTimerModalProps) {
   const remainingMs = focusSession ? focusSession.endsAt - now : totalMs;
   const elapsedMs = focusSession ? Math.max(0, now - focusSession.startedAt) : 0;
   const progress = focusSession ? Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100)) : 0;
-  const rewardCoins = focusSession ? Math.min(100, Math.max(1, Math.floor(focusSession.durationMinutes * 2))) : 0;
+  const previewCoins = focusRewardCoins(duration);
+  const rewardCoins = focusSession ? focusRewardCoins(focusSession.durationMinutes) : 0;
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Mochi Focus Timer" onClick={onClose} className="meow-chat-backdrop">
@@ -88,7 +97,18 @@ export function FocusTimerModal({ open, onClose }: FocusTimerModalProps) {
               <span style={{ width: `${progress}%` }} />
             </div>
             <p>Mochi nemenin kamu fokus. Hunger dan energy tetap jalan, stat lain istirahat dulu.</p>
-            <MeowchiButton tone="neutral" onClick={onClose}>Tutup</MeowchiButton>
+            <div className="meow-focus-actions">
+              <MeowchiButton
+                tone="danger"
+                onClick={() => {
+                  stopFocusSession();
+                  onClose();
+                }}
+              >
+                Stop
+              </MeowchiButton>
+              <MeowchiButton tone="neutral" onClick={onClose}>Tutup</MeowchiButton>
+            </div>
           </section>
         )}
 
@@ -136,6 +156,13 @@ export function FocusTimerModal({ open, onClose }: FocusTimerModalProps) {
               />
               <small>menit</small>
             </label>
+            <div className="meow-focus-formula">
+              <strong>Reward sesi ini</strong>
+              <span>+{previewCoins} koin</span>
+              <span>+{FOCUS_HAPPINESS_REWARD} happiness</span>
+              <span>-{FOCUS_ENERGY_COST_ON_COMPLETE} energy saat selesai</span>
+              <small>Koin dihitung {FOCUS_COIN_PER_MINUTE} per menit, maksimal {FOCUS_MAX_COINS}.</small>
+            </div>
             <MeowchiButton
               onClick={() => {
                 const started = startFocusSession(activity, duration);
