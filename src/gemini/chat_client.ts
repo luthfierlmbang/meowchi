@@ -195,8 +195,7 @@ export async function sendMessage(payload: ChatPayload): Promise<ChatMessage> {
       throw new ChatClientError('Auth error pada Gemini chat.', 'auth');
     }
     if (msg.includes('quota') || msg.includes('rate') || e?.status === 429) {
-      disableFeature('chat', 'quota');
-      throw new ChatClientError('Quota Gemini chat tercapai.', 'quota');
+      throw new ChatClientError('Gemini sedang kena rate limit. Tunggu sebentar lalu coba lagi.', 'quota');
     }
     throw new ChatClientError(e?.message || 'Network error', 'network');
   } finally {
