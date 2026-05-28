@@ -34,6 +34,12 @@ export async function signInOrSignUp(email: string, password: string): Promise<S
   const created = await supabase.auth.signUp({
     email: normalizedEmail,
     password,
+    options: {
+      emailRedirectTo:
+        typeof window === 'undefined'
+          ? undefined
+          : `${window.location.origin}/`,
+    },
   });
   if (created.error) throw created.error;
   return created.data.session;
