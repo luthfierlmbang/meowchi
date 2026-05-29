@@ -1,5 +1,5 @@
 import { useStore } from '../state/store';
-import type { PersistedState } from '../state/types';
+import type { CatState, PersistedState } from '../state/types';
 import { supabase } from './client';
 import { applyOfflineCatchUp } from '../engine/stat_engine';
 import { isSleepHour } from '../engine/sleep_schedule';
@@ -14,9 +14,33 @@ let unsubscribeSync: (() => void) | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let applyingRemote = false;
 
+function normalizeCloudState(state: CatState): CatState {
+  if (
+    state === 'eating' ||
+    state === 'scratching' ||
+    state === 'pooping' ||
+    state === 'carried' ||
+    state === 'clicked_left' ||
+    state === 'clicked_right'
+  ) {
+    return 'idle';
+  }
+  return state;
+}
+
+function normalizePersistedState(data: PersistedState): PersistedState {
+  return {
+    ...data,
+    pet: {
+      ...data.pet,
+      currentState: normalizeCloudState(data.pet.currentState),
+    },
+  };
+}
+
 function currentPersistedState(): PersistedState {
   const s = useStore.getState();
-  return {
+  return normalizePersistedState({
     pet: s.pet,
     placed_items: s.placed_items,
     inventory: s.inventory,
@@ -27,7 +51,7 @@ function currentPersistedState(): PersistedState {
     sfxVolume: s.sfxVolume,
     chatHistory: s.chatHistory,
     focusSession: s.focusSession,
-  };
+  });
 }
 
 function applyPersistedState(data: PersistedState): void {
@@ -58,19 +82,20 @@ export async function loadGameSave(userId: string): Promise<void> {
 
   if (error) throw error;
   if (data?.data) {
-    const catchUp = applyOfflineCatchUp({ pet: data.data.pet });
+    const normalizedData = normalizePersistedState(data.data);
+    const catchUp = applyOfflineCatchUp({ pet: normalizedData.pet });
     const caughtUpData: PersistedState = {
-      ...data.data,
+      ...normalizedData,
       pet: {
-        ...data.data.pet,
+        ...normalizedData.pet,
         stats: catchUp.newStats,
         lastChecked: catchUp.newLastChecked,
         currentState:
-          data.data.pet.currentState === 'sleeping' &&
+          normalizedData.pet.currentState === 'sleeping' &&
           catchUp.newStats.energy === 100 &&
           !isSleepHour()
             ? 'idle'
-            : data.data.pet.currentState,
+            : normalizedData.pet.currentState,
       },
     };
     applyPersistedState(caughtUpData);
